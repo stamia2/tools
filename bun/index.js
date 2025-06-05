@@ -7,22 +7,22 @@ const path = require("path");
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');        // 只填写UP_RUL将上传节点,同时填写UP_RUL和P_RUL将上传订阅
-const UP_RUL = process.env.UP_RUL || 'merge.222.pp.ua';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.serv00.net
+const UP_RUL = process.env.UP_RUL || '';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.serv00.net
 const P_RUL = process.env.P_RUL || '';    // 需要上传订阅或保活时需填写项目分配的url,例如：https://google.com
 const AUTO_A = process.env.AUTO_A || false; // false关闭自动保活，true开启,需同时填写P_RUL变量
 const F_PATH = process.env.F_PATH || './tmp';   // 运行目录,sub节点文件保存目录
 const S_PATH = process.env.S_PATH || 'sss';       // 订阅路径
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        // http服务订阅端口
 const UUID = process.env.UUID || 'fda4033e-26b6-44b0-b233-ab84d531d312'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
-const N_SERVER = process.env.N_SERVER || 'tz.234.pp.ua';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
+const N_SERVER = process.env.N_SERVER || '';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
 const N_PORT = process.env.N_PORT || '443';            // 使用哪吒v1请留空，哪吒v0需填写
-const N_KEY = process.env.N_KEY || 'qU5529az6TeLJ039eW';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
-const EG_DOMAIN = process.env.EG_DOMAIN || 'idx-6.333333.pp.ua';          // 固定隧道域名,留空即启用临时隧道
-const EG_AUTH = process.env.EG_AUTH || '{"AccountTag":"854053d711712e9d3f717b21d1459630","TunnelSecret":"RPfc0sqU7a/aTIja9g+h/r2iE60F8WEyDBvRXhZc9hI=","TunnelID":"d0731e8d-b6b5-4c89-8dbf-2e5f0b016d0e","Endpoint":""}';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://fscarmen.cloudflare.now.cc
+const N_KEY = process.env.N_KEY || '';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
+const EG_DOMAIN = process.env.EG_DOMAIN || '';          // 固定隧道域名,留空即启用临时隧道
+const EG_AUTH = process.env.EG_AUTH || '';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://fscarmen.cloudflare.now.cc
 const EG_PORT = process.env.EG_PORT || 8001;            // 固定隧道端口,使用token需在cloudflare后台设置和这里一致
 const CFIP = process.env.CFIP || 'ip.sb';         // 节点优选域名或优选ip  
 const CFPORT = process.env.CFPORT || 443;                   // 节点优选域名或优选ip对应的端口
-const NAME = process.env.NAME || 'berrynodes-bun';                     // 节点名称
+const NAME = process.env.NAME || 'name';                     // 节点名称
 
 //创建运行文件夹
 if (!fs.existsSync(F_PATH)) {

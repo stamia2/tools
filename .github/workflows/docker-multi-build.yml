@@ -1,4 +1,4 @@
-name: Build and Push Multiple Docker Images
+name: Build and Push to Personal GHCR
 
 on:
   push:
@@ -10,39 +10,33 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write  # 关键修复点
+      id-token: write  # 必须！
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Log in to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push images
+      - name: Build and push
         env:
           FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
         run: |
           for folder in $FOLDERS; do
-            echo "Building $folder"
-            if [ ! -d "./$folder" ]; then
-              echo "Error: Directory ./$folder not found!"
-              exit 1
-            fi
+            lower_name=$(echo "$folder" | tr '[:upper:]' '[:lower:]')  # 转小写
+            echo "Building $lower_name"
             docker buildx build \
               --platform linux/amd64,linux/arm64 \
               --push \
-              -t ghcr.io/${{ github.repository_owner }}/tools/$folder:latest \
-              -t ghcr.io/${{ github.repository_owner }}/tools/$folder:${{ github.sha }} \
+              -t ghcr.io/${{ github.repository_owner }}/tools/$lower_name:latest \
+              -t ghcr.io/${{ github.repository_owner }}/tools/$lower_name:${{ github.sha }} \
               ./$folder
           done

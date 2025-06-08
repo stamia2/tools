@@ -22,10 +22,10 @@ jobs:
           pwd
           echo "仓库内容:"
           ls -la
-          echo "tools 目录内容:"
-          ls -la ./tools
+          echo "根目录内容:"
+          ls -la .
           echo "xhttp 目录是否存在:"
-          if [ -d "./tools/xhttp" ]; then
+          if [ -d "./xhttp" ]; then
             echo "存在"
           else
             echo "不存在"
@@ -51,18 +51,18 @@ jobs:
         run: |
           for folder in $FOLDERS; do
             echo "构建镜像: $folder"
-            echo "检查目录: ./tools/$folder"
+            echo "检查目录: ./$folder"
             
-            if [ -d "./tools/$folder" ]; then
+            if [ -d "./$folder" ]; then
               echo "目录存在，开始构建"
               docker buildx build \
                 --platform linux/amd64,linux/arm64 \
                 --push \
                 -t ghcr.io/stamia2/tools/$folder:latest \
                 -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
-                ./tools/$folder
+                ./$folder
             else
-              echo "错误: 目录 ./tools/$folder 不存在，跳过构建"
+              echo "错误: 目录 ./$folder 不存在，跳过构建"
               continue
             fi
           done

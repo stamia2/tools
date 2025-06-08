@@ -16,6 +16,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Print working directory
+        run: pwd
+
+      - name: Set directory permissions
+        run: chmod -R 755 ./tools
+
+      - name: List tools directory contents
+        run: ls -l ./tools
+
+      - name: Check directory existence
+        run: |
+          if [ -d "./tools/xhttp" ]; then
+            echo "Directory ./tools/xhttp exists."
+          else
+            echo "Directory ./tools/xhttp does not exist."
+            exit 1
+          fi
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -31,7 +49,6 @@ jobs:
 
       - name: Build and push images
         env:
-          # 移除 go-2go
           FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
         run: |
           for folder in $FOLDERS; do

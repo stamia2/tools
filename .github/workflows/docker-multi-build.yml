@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: write  # 确保有推送包的权限
 
     steps:
       - name: Checkout
@@ -24,13 +24,6 @@ jobs:
           ls -la
           echo "根目录内容:"
           ls -la .
-          echo "xhttp 目录是否存在:"
-          if [ -d "./xhttp" ]; then
-            echo "存在"
-          else
-            echo "不存在"
-            exit 1
-          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -43,7 +36,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}  # 使用自动生成的 token
 
       - name: Build and push images
         env:
@@ -51,10 +44,8 @@ jobs:
         run: |
           for folder in $FOLDERS; do
             echo "构建镜像: $folder"
-            echo "检查目录: ./$folder"
-            
             if [ -d "./$folder" ]; then
-              echo "目录存在，开始构建"
+              echo "开始构建: ./$folder"
               docker buildx build \
                 --platform linux/amd64,linux/arm64 \
                 --push \
@@ -62,7 +53,7 @@ jobs:
                 -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
                 ./$folder
             else
-              echo "错误: 目录 ./$folder 不存在，跳过构建"
-              continue
+              echo "目录不存在: ./$folder"
+              exit 1
             fi
           done

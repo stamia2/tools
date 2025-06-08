@@ -2,28 +2,19 @@ name: Build and Push Multiple Docker Images
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 确保有推送包的权限
+      packages: write
+      id-token: write  # 关键修复点
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Debug directory structure
-        run: |
-          echo "当前工作目录:"
-          pwd
-          echo "仓库内容:"
-          ls -la
-          echo "根目录内容:"
-          ls -la .
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -36,24 +27,22 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # 使用自动生成的 token
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push images
         env:
           FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
         run: |
           for folder in $FOLDERS; do
-            echo "构建镜像: $folder"
-            if [ -d "./$folder" ]; then
-              echo "开始构建: ./$folder"
-              docker buildx build \
-                --platform linux/amd64,linux/arm64 \
-                --push \
-                -t ghcr.io/stamia2/tools/$folder:latest \
-                -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
-                ./$folder
-            else
-              echo "目录不存在: ./$folder"
+            echo "Building $folder"
+            if [ ! -d "./$folder" ]; then
+              echo "Error: Directory ./$folder not found!"
               exit 1
             fi
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --push \
+              -t ghcr.io/${{ github.repository_owner }}/tools/$folder:latest \
+              -t ghcr.io/${{ github.repository_owner }}/tools/$folder:${{ github.sha }} \
+              ./$folder
           done

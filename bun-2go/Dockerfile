@@ -2,7 +2,7 @@ FROM oven/bun:1.0.13-slim
 
 WORKDIR /app
 
-COPY package.json  ./
+COPY . .
 
 RUN bun install --production
 

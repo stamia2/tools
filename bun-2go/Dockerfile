@@ -2,14 +2,13 @@ FROM oven/bun:1.0.13-slim
 
 WORKDIR /app
 
-COPY . .
+# 只复制 .json（不复制不存在的 bun.lockb）
+COPY package.json ./
 
-RUN bun install --production
+RUN bun install --production --no-save
 
 COPY . .
 
 EXPOSE 3000
-
-RUN chmod +x index.js
 
 CMD ["bun", "index.js"]

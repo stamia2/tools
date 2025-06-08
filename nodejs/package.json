@@ -1,5 +1,5 @@
 {
-  "name": "nodejs-2go",
+  "name": "nodejs-go",
   "version": "8.8.8",
   "description": "Thsi is a node project",
   "main": "index.js",

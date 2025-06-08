@@ -5,7 +5,7 @@ WORKDIR /app
 # 只复制 .json（不复制不存在的 bun.lockb）
 COPY package.json ./
 
-RUN bun install --production --no-save
+RUN bun install
 
 COPY . .
 

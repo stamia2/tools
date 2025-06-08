@@ -3,7 +3,7 @@ name: Build and Push Multiple Docker Images
 on:
   push:
     branches:
-      - main
+      - main  # 当 main 分支有推送时触发
 
 jobs:
   build-and-push:
@@ -27,34 +27,18 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push images
+        env:
+          # 移除 go-2go
+          FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
         run: |
-          FOLDERS=$(find . -name Dockerfile -exec dirname {} \; | sed 's|^\./||' | sort)
-          
           for folder in $FOLDERS; do
-            image_name=$(basename $folder)
-            
-            echo "Building image for: $folder"
-            
-            # 检查是否存在 bun.lockb
-            if [ -f "$folder/bun.lockb" ]; then
-              # 存在锁文件，正常构建
-              docker buildx build \
-                --platform linux/amd64,linux/arm64 \
-                --push \
-                -t ghcr.io/stamia2/tools/$image_name:latest \
-                -t ghcr.io/stamia2/tools/$image_name:${{ github.sha }} \
-                ./$folder
-            else
-              # 不存在锁文件，使用 --no-save 参数
-              docker buildx build \
-                --platform linux/amd64,linux/arm64 \
-                --push \
-                -t ghcr.io/stamia2/tools/$image_name:latest \
-                -t ghcr.io/stamia2/tools/$image_name:${{ github.sha }} \
-                --build-arg NO_SAVE=--no-save \
-                ./$folder
-            fi
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --push \
+              -t ghcr.io/stamia2/tools/$folder:latest \
+              -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
+              ./tools/$folder
           done

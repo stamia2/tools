@@ -3,7 +3,7 @@ name: Build and Push Multiple Docker Images
 on:
   push:
     branches:
-      - main  # 当 main 分支有推送时触发
+      - main
 
 jobs:
   build-and-push:
@@ -30,14 +30,19 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build and push images
-        env:
-          FOLDERS: "xhttp bun-2go python-2go go-2go nodejs-2go nodejs-sb"
         run: |
+          # 动态查找所有包含 Dockerfile 的文件夹
+          FOLDERS=$(find . -name Dockerfile -exec dirname {} \; | sed 's|^\./||' | sort)
+          
           for folder in $FOLDERS; do
+            # 获取文件夹名称（去除路径前缀）
+            image_name=$(basename $folder)
+            
+            echo "Building image for: $folder"
             docker buildx build \
               --platform linux/amd64,linux/arm64 \
               --push \
-              -t ghcr.io/stamia2/tools/$folder:latest \
-              -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
-              ./tools/$folder
+              -t ghcr.io/stamia2/tools/$image_name:latest \
+              -t ghcr.io/stamia2/tools/$image_name:${{ github.sha }} \
+              ./$folder
           done

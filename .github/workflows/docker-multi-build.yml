@@ -31,18 +31,30 @@ jobs:
 
       - name: Build and push images
         run: |
-          # 动态查找所有包含 Dockerfile 的文件夹
           FOLDERS=$(find . -name Dockerfile -exec dirname {} \; | sed 's|^\./||' | sort)
           
           for folder in $FOLDERS; do
-            # 获取文件夹名称（去除路径前缀）
             image_name=$(basename $folder)
             
             echo "Building image for: $folder"
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --push \
-              -t ghcr.io/stamia2/tools/$image_name:latest \
-              -t ghcr.io/stamia2/tools/$image_name:${{ github.sha }} \
-              ./$folder
+            
+            # 检查是否存在 bun.lockb
+            if [ -f "$folder/bun.lockb" ]; then
+              # 存在锁文件，正常构建
+              docker buildx build \
+                --platform linux/amd64,linux/arm64 \
+                --push \
+                -t ghcr.io/stamia2/tools/$image_name:latest \
+                -t ghcr.io/stamia2/tools/$image_name:${{ github.sha }} \
+                ./$folder
+            else
+              # 不存在锁文件，使用 --no-save 参数
+              docker buildx build \
+                --platform linux/amd64,linux/arm64 \
+                --push \
+                -t ghcr.io/stamia2/tools/$image_name:latest \
+                -t ghcr.io/stamia2/tools/$image_name:${{ github.sha }} \
+                --build-arg NO_SAVE=--no-save \
+                ./$folder
+            fi
           done

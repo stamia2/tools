@@ -3,7 +3,7 @@ name: Build and Push Multiple Docker Images
 on:
   push:
     branches:
-      - main  # 当 main 分支有推送时触发
+      - main
 
 jobs:
   build-and-push:
@@ -16,21 +16,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Print working directory
-        run: pwd
-
-      - name: Set directory permissions
-        run: chmod -R 755 ./tools
-
-      - name: List tools directory contents
-        run: ls -l ./tools
-
-      - name: Check directory existence
+      - name: Debug directory structure
         run: |
+          echo "当前工作目录:"
+          pwd
+          echo "仓库内容:"
+          ls -la
+          echo "tools 目录内容:"
+          ls -la ./tools
+          echo "xhttp 目录是否存在:"
           if [ -d "./tools/xhttp" ]; then
-            echo "Directory ./tools/xhttp exists."
+            echo "存在"
           else
-            echo "Directory ./tools/xhttp does not exist."
+            echo "不存在"
             exit 1
           fi
 
@@ -52,10 +50,19 @@ jobs:
           FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
         run: |
           for folder in $FOLDERS; do
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --push \
-              -t ghcr.io/stamia2/tools/$folder:latest \
-              -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
-              ./tools/$folder
+            echo "构建镜像: $folder"
+            echo "检查目录: ./tools/$folder"
+            
+            if [ -d "./tools/$folder" ]; then
+              echo "目录存在，开始构建"
+              docker buildx build \
+                --platform linux/amd64,linux/arm64 \
+                --push \
+                -t ghcr.io/stamia2/tools/$folder:latest \
+                -t ghcr.io/stamia2/tools/$folder:${{ github.sha }} \
+                ./tools/$folder
+            else
+              echo "错误: 目录 ./tools/$folder 不存在，跳过构建"
+              continue
+            fi
           done

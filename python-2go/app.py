@@ -18,9 +18,9 @@ FILE_PATH = os.environ.get('FILE_PATH', './tmp')
 PROJECT_URL = os.environ.get('URL', '')
 INTERVAL_SECONDS = int(os.environ.get("TIME", 120))
 UUID = os.environ.get('UUID', '0004add9-5c68-8bab-870c-08cd5320df00')
-NEZHA_SERVER = os.environ.get('NEZHA_SERVER', 'nz.f4i.cn')
-NEZHA_PORT = os.environ.get('NEZHA_PORT', '443')
-NEZHA_KEY = os.environ.get('NEZHA_KEY', '')
+N_SERVER = os.environ.get('N_SERVER', 'nz.f4i.cn')
+N_PORT = os.environ.get('N_PORT', '5555')
+N_KEY = os.environ.get('N_KEY', '')
 ERGOU_DOMAIN = os.environ.get('ERGOU_DOMAIN', '')
 ERGOU_AUTH = os.environ.get('ERGOU_AUTH', '')
 ERGOU_PORT = int(os.environ.get('ERGOU_PORT', 8001))
@@ -122,12 +122,12 @@ def download_files_and_run():
     authorize_files(files_to_authorize)
 
     # Run ne-zha
-    NEZHA_TLS = ''
+    N_TLS = ''
     valid_ports = ['443', '8443', '2096', '2087', '2083', '2053']
-    if NEZHA_SERVER and NEZHA_PORT and NEZHA_KEY:
-        if NEZHA_PORT in valid_ports:
-          NEZHA_TLS = '--tls'
-        command = f"nohup {FILE_PATH}/npm -s {NEZHA_SERVER}:{NEZHA_PORT} -p {NEZHA_KEY} {NEZHA_TLS} --tls --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1 &"
+    if N_SERVER and N_PORT and N_KEY:
+        if N_PORT in valid_ports:
+          N_TLS = '--tls'
+        command = f"nohup {FILE_PATH}/npm -s {N_SERVER}:{N_PORT} -p {N_KEY} {N_TLS} >/dev/null 2>&1 &"
         try:
             subprocess.run(command, shell=True, check=True)
             print('npm is running')
@@ -135,7 +135,7 @@ def download_files_and_run():
         except subprocess.CalledProcessError as e:
             print(f'npm running error: {e}')
     else:
-        print('NEZHA variable is empty, skip running')
+        print('N variable is empty, skip running')
 
     # Run xr-ay
     command1 = f"nohup {FILE_PATH}/web -c {FILE_PATH}/config.json >/dev/null 2>&1 &"

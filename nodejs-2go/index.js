@@ -60,7 +60,6 @@ function deleteNodes() {
     );
 
     if (nodes.length === 0) return;
-
     return axios.post(`${UP_RUL}/api/delete-nodes`, 
       JSON.stringify({ nodes }),
       { headers: { 'Content-Type': 'application/json' } }
@@ -194,11 +193,9 @@ async function downloadFilesAndRun() {
   
   if (N_SERVER && N_KEY) {
     if (!N_PORT) {
-      
       const port = N_SERVER.includes(':') ? N_SERVER.split(':').pop() : '';
       const tlsPorts = new Set(['443', '8443', '2096', '2087', '2083', '2053']);
       const Ntls = tlsPorts.has(port) ? 'true' : 'false';
-      
       const configYaml = `
 client_secret: ${N_KEY}
 debug: false
@@ -219,10 +216,7 @@ tls: ${ntls}
 use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: ${UUID}`;
-      
       fs.writeFileSync(path.join(F_PATH, 'config.yaml'), configYaml);
-      
-      
       const command = `nohup ${F_PATH}/php -c "${F_PATH}/config.yaml" >/dev/null 2>&1 &`;
       try {
         await exec(command);
@@ -262,7 +256,6 @@ uuid: ${UUID}`;
 
   if (fs.existsSync(path.join(F_PATH, 'bot'))) {
     let args;
-
     if (ERGOU_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
       args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ERGOU_AUTH}`;
     } else if (ERGOU_AUTH.match(/TunnelSecret/)) {
@@ -270,7 +263,6 @@ uuid: ${UUID}`;
     } else {
       args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${F_PATH}/boot.log --loglevel info --url http:
     }
-
     try {
       await exec(`nohup ${F_PATH}/bot ${args} >/dev/null 2>&1 &`);
       console.log('bot is running');
@@ -280,9 +272,7 @@ uuid: ${UUID}`;
     }
   }
   await new Promise((resolve) => setTimeout(resolve, 5000));
-
 }
-
 
 function getFilesForArchitecture(architecture) {
   let baseFiles;
@@ -334,7 +324,6 @@ function argoType() {
   tunnel: ${ERGOU_AUTH.split('"')[11]}
   credentials-file: ${path.join(F_PATH, 'tunnel.json')}
   protocol: http2
-  
   ingress:
     - hostname: ${ERGOU_DOMAIN}
       service: http:
@@ -348,11 +337,8 @@ function argoType() {
   }
 }
 argoType();
-
-
 async function extractDomains() {
   let argoDomain;
-
   if (ERGOU_AUTH && ERGOU_DOMAIN) {
     argoDomain = ERGOU_DOMAIN;
     console.log('ERGOU_DOMAIN:', argoDomain);
@@ -369,20 +355,17 @@ async function extractDomains() {
           argoDomains.push(domain);
         }
       });
-
       if (argoDomains.length > 0) {
         argoDomain = argoDomains[0];
         console.log('ArgoDomain:', argoDomain);
         await generateLinks(argoDomain);
       } else {
         console.log('ArgoDomain not found, re-running bot to obtain ArgoDomain');
-       
         fs.unlinkSync(path.join(F_PATH, 'boot.log'));
         async function killBotProcess() {
           try {
             await exec('pkill -f "[b]ot" > /dev/null 2>&1');
           } catch (error) {
-            
           }
         }
         killBotProcess();

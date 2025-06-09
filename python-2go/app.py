@@ -79,7 +79,7 @@ server_thread = threading.Thread(target=httpd.serve_forever)
 server_thread.daemon = True
 server_thread.start()
 
-# Generate xr-ay config file
+# Generate  config file
 def generate_config():
     config ={"log":{"access":"/dev/null","error":"/dev/null","loglevel":"none",},"inbounds":[{"port":ERGOU_PORT ,"protocol":"vless","settings":{"clients":[{"id":UUID ,"flow":"xtls-rprx-vision",},],"decryption":"none","fallbacks":[{"dest":3001 },{"path":"/vless-argo","dest":3002 },{"path":"/vmess-argo","dest":3003 },{"path":"/trojan-argo","dest":3004 },],},"streamSettings":{"network":"tcp",},},{"port":3001 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID },],"decryption":"none"},"streamSettings":{"network":"ws","security":"none"}},{"port":3002 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID ,"level":0 }],"decryption":"none"},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/vless-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3003 ,"listen":"127.0.0.1","protocol":"vmess","settings":{"clients":[{"id":UUID ,"alterId":0 }]},"streamSettings":{"network":"ws","wsSettings":{"path":"/vmess-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3004 ,"listen":"127.0.0.1","protocol":"trojan","settings":{"clients":[{"password":UUID },]},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/trojan-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},],"dns":{"servers":["https+local://8.8.8.8/dns-query"]},"outbounds":[{"protocol":"freedom","tag": "direct" },{"protocol":"blackhole","tag":"block"}]}
     with open(os.path.join(FILE_PATH, 'config.json'), 'w', encoding='utf-8') as config_file:
@@ -121,7 +121,7 @@ def download_files_and_run():
     files_to_authorize = ['npm', 'web', 'bot']
     authorize_files(files_to_authorize)
 
-    # Run ne-zha
+    # Run nZserver
     N_TLS = ''
     valid_ports = ['443', '8443', '2096', '2087', '2083', '2053']
     if N_SERVER and N_PORT and N_KEY:
@@ -137,7 +137,7 @@ def download_files_and_run():
     else:
         print('N variable is empty, skip running')
 
-    # Run xr-ay
+    # Run xserver
     command1 = f"nohup {FILE_PATH}/web -c {FILE_PATH}/config.json >/dev/null 2>&1 &"
     try:
         subprocess.run(command1, shell=True, check=True)
@@ -146,7 +146,7 @@ def download_files_and_run():
     except subprocess.CalledProcessError as e:
         print(f'web running error: {e}')
 
-    # Run cloud-fared
+    # Run cfserver
     if os.path.exists(os.path.join(FILE_PATH, 'bot')):
 		# Get command line arguments for cloud-fared
         args = get_cloud_flare_args()
@@ -213,7 +213,7 @@ def authorize_files(file_paths):
             print(f"Empowerment failed for {absolute_file_path}: {e}")
 
 
-# Get fixed tunnel JSON and yml
+# Get fixed  JSON and yml
 def argo_config():
     if not ERGOU_AUTH or not ERGOU_DOMAIN:
         print("ERGOU_DOMAIN or ERGOU_AUTH is empty, use quick Tunnels")
@@ -241,7 +241,7 @@ ingress:
 
 argo_config()
 
-# Get temporary tunnel domain
+# Get temporary  domain
 def extract_domains():
     argo_domain = ''
 

@@ -9,12 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 允许推送镜像
-      id-token: write  # 必须！否则 403
+      packages: write
+      id-token: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Clean Docker cache
+        run: docker system prune -f
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -23,20 +26,20 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}  # 自动使用触发者（stamia2）
-          password: ${{ secrets.GITHUB_TOKEN }}  # GitHub 自动生成的 token
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker images
         env:
           FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
         run: |
           for folder in $FOLDERS; do
-            # 强制转小写（GHCR 要求）
             lower_name=$(echo "$folder" | tr '[:upper:]' '[:lower:]')
             echo "Building ghcr.io/stamia2/tools/$lower_name"
             docker buildx build \
               --platform linux/amd64,linux/arm64 \
               --push \
+              --no-cache \  # 禁用缓存
               -t ghcr.io/stamia2/tools/$lower_name:latest \
               -t ghcr.io/stamia2/tools/$lower_name:${{ github.sha }} \
               ./$folder

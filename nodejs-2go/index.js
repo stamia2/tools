@@ -6,45 +6,45 @@ const fs = require("fs");
 const path = require("path");
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
-const { execSync } = require('child_process');       
-const UP_RUL = process.env.UP_RUL || '';     
-const P_RUL = process.env.P_RUL || '';    
-const AUTO_A = process.env.AUTO_A || false; 
-const F_PATH = process.env.F_PATH || './tmp';   
-const S_PATH = process.env.S_PATH || 'sss';       
-const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        
-const UUID = process.env.UUID || 'fda4033e-26b6-44b0-b233-ab84d531d312'; 
-const N_SERVER = process.env.N_SERVER || '';        
-const N_PORT = process.env.N_PORT || '443';            
-const N_KEY = process.env.N_KEY || '';              
-const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || '';          
-const ERGOU_AUTH = process.env.ERGOU_AUTH || '';              
-const ERGOU_PORT = process.env.ERGOU_PORT || 8001;            
-const CFIP = process.env.CFIP || 'ip.sb';         
-const CFPORT = process.env.CFPORT || 443;                   
-const NAME = process.env.NAME || 'name';                     
+const { execSync } = require('child_process');        // 只填写UPLOAD_URL将上传节点,同时填写UPLOAD_URL和PROJECT_URL将上传订阅
+const UPLOAD_URL = process.env.UPLOAD_URL || '';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.serv00.net
+const PROJECT_URL = process.env.PROJECT_URL || '';    // 需要上传订阅或保活时需填写项目分配的url,例如：https://google.com
+const AUTO_ACCESS = process.env.AUTO_ACCESS || false; // false关闭自动保活，true开启,需同时填写PROJECT_URL变量
+const FILE_PATH = process.env.FILE_PATH || './tmp';   // 运行目录,sub节点文件保存目录
+const S_PATH = process.env.S_PATH || 'sub';       // 订阅路径
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        // http服务订阅端口
+const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
+const N_SERVER = process.env.N_SERVER || '';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
+const N_PORT = process.env.N_PORT || '';            // 使用哪吒v1请留空，哪吒v0需填写
+const N_KEY = process.env.N_KEY || '';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
+const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || '';          // 固定隧道域名,留空即启用临时隧道
+const ERGOU_AUTH = process.env.ERGOU_AUTH || '';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://fscarmen.cloudflare.now.cc
+const ERGOU_PORT = process.env.ERGOU_PORT || 8001;            // 固定隧道端口,使用token需在cloudflare后台设置和这里一致
+const CFIP = process.env.CFIP || 'ip.sb';         // 节点优选域名或优选ip  
+const CFPORT = process.env.CFPORT || 443;                   // 节点优选域名或优选ip对应的端口
+const NAME = process.env.NAME || 'Vls';                     // 节点名称
 
-
-if (!fs.existsSync(F_PATH)) {
-  fs.mkdirSync(F_PATH);
-  console.log(`${F_PATH} is created`);
+//创建运行文件夹
+if (!fs.existsSync(FILE_PATH)) {
+  fs.mkdirSync(FILE_PATH);
+  console.log(`${FILE_PATH} is created`);
 } else {
-  console.log(`${F_PATH} already exists`);
+  console.log(`${FILE_PATH} already exists`);
 }
 
-let npmPath = path.join(F_PATH, 'npm');
-let phpPath = path.join(F_PATH, 'php');
-let webPath = path.join(F_PATH, 'web');
-let botPath = path.join(F_PATH, 'bot');
-let subPath = path.join(F_PATH, 'sub.txt');
-let listPath = path.join(F_PATH, 'list.txt');
-let bootLogPath = path.join(F_PATH, 'boot.log');
-let configPath = path.join(F_PATH, 'config.json');
+let npmPath = path.join(FILE_PATH, 'npm');
+let phpPath = path.join(FILE_PATH, 'php');
+let webPath = path.join(FILE_PATH, 'web');
+let botPath = path.join(FILE_PATH, 'bot');
+let subPath = path.join(FILE_PATH, 'sub.txt');
+let listPath = path.join(FILE_PATH, 'list.txt');
+let bootLogPath = path.join(FILE_PATH, 'boot.log');
+let configPath = path.join(FILE_PATH, 'config.json');
 
-
+// 如果有则先删除
 function deleteNodes() {
   try {
-    if (!UP_RUL) return;
+    if (!UPLOAD_URL) return;
     if (!fs.existsSync(subPath)) return;
 
     let fileContent;
@@ -56,11 +56,12 @@ function deleteNodes() {
 
     const decoded = Buffer.from(fileContent, 'base64').toString('utf-8');
     const nodes = decoded.split('\n').filter(line => 
-      /(vless|vmess|trojan|hysteria2|tuic):\/\
+      /(vless|vmess|trojan|hysteria2|tuic):\/\//.test(line)
     );
 
     if (nodes.length === 0) return;
-    return axios.post(`${UP_RUL}/api/delete-nodes`, 
+
+    return axios.post(`${UPLOAD_URL}/api/delete-nodes`, 
       JSON.stringify({ nodes }),
       { headers: { 'Content-Type': 'application/json' } }
     ).catch((error) => { 
@@ -71,21 +72,21 @@ function deleteNodes() {
   }
 }
 
-
+//clean
 function cleanupOldFiles() {
   const pathsToDelete = ['web', 'bot', 'npm', 'php', 'sub.txt', 'boot.log'];
   pathsToDelete.forEach(file => {
-    const filePath = path.join(F_PATH, file);
+    const filePath = path.join(FILE_PATH, file);
     fs.unlink(filePath, () => {});
   });
 }
 
-
+// route
 app.get("/", function(req, res) {
   res.send("Hello world!");
 });
 
-
+// xserver
 const config = {
   log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
   inbounds: [
@@ -95,12 +96,12 @@ const config = {
     { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
     { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
   ],
-  dns: { servers: ["https+local:
+  dns: { servers: ["https+local://8.8.8.8/dns-query"] },
   outbounds: [ { protocol: "freedom", tag: "direct" }, {protocol: "blackhole", tag: "block"} ]
 };
-fs.writeFileSync(path.join(F_PATH, 'config.json'), JSON.stringify(config, null, 2));
+fs.writeFileSync(path.join(FILE_PATH, 'config.json'), JSON.stringify(config, null, 2));
 
-
+// arch
 function getSystemArchitecture() {
   const arch = os.arch();
   if (arch === 'arm' || arch === 'arm64' || arch === 'aarch64') {
@@ -110,9 +111,9 @@ function getSystemArchitecture() {
   }
 }
 
-
+// downloadFile
 function downloadFile(fileName, fileUrl, callback) {
-  const filePath = path.join(F_PATH, fileName);
+  const filePath = path.join(FILE_PATH, fileName);
   const writer = fs.createWriteStream(filePath);
 
   axios({
@@ -132,18 +133,18 @@ function downloadFile(fileName, fileUrl, callback) {
       writer.on('error', err => {
         fs.unlink(filePath, () => { });
         const errorMessage = `Download ${fileName} failed: ${err.message}`;
-        console.error(errorMessage); 
+        console.error(errorMessage); // failed
         callback(errorMessage);
       });
     })
     .catch(err => {
       const errorMessage = `Download ${fileName} failed: ${err.message}`;
-      console.error(errorMessage); 
+      console.error(errorMessage); // failed
       callback(errorMessage);
     });
 }
 
-
+// architecture
 async function downloadFilesAndRun() {
   const architecture = getSystemArchitecture();
   const filesToDownload = getFilesForArchitecture(architecture);
@@ -171,11 +172,11 @@ async function downloadFilesAndRun() {
     console.error('Error downloading files:', err);
     return;
   }
-  
+  // Permissions
   function authorizeFiles(filePaths) {
     const newPermissions = 0o775;
     filePaths.forEach(relativeFilePath => {
-      const absoluteFilePath = path.join(F_PATH, relativeFilePath);
+      const absoluteFilePath = path.join(FILE_PATH, relativeFilePath);
       if (fs.existsSync(absoluteFilePath)) {
         fs.chmod(absoluteFilePath, newPermissions, (err) => {
           if (err) {
@@ -190,12 +191,14 @@ async function downloadFilesAndRun() {
   const filesToAuthorize = N_PORT ? ['./npm', './web', './bot'] : ['./php', './web', './bot'];
   authorizeFiles(filesToAuthorize);
 
-  
+  //运行nZserver
   if (N_SERVER && N_KEY) {
     if (!N_PORT) {
+      // tls or not
       const port = N_SERVER.includes(':') ? N_SERVER.split(':').pop() : '';
       const tlsPorts = new Set(['443', '8443', '2096', '2087', '2083', '2053']);
-      const Ntls = tlsPorts.has(port) ? 'true' : 'false';
+      const nezhatls = tlsPorts.has(port) ? 'true' : 'false';
+      //  config
       const configYaml = `
 client_secret: ${N_KEY}
 debug: false
@@ -212,12 +215,15 @@ server: ${N_SERVER}
 skip_connection_count: false
 skip_procs_count: false
 temperature: false
-tls: ${ntls}
+tls: ${nezhatls}
 use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: ${UUID}`;
-      fs.writeFileSync(path.join(F_PATH, 'config.yaml'), configYaml);
-      const command = `nohup ${F_PATH}/php -c "${F_PATH}/config.yaml" >/dev/null 2>&1 &`;
+      
+      fs.writeFileSync(path.join(FILE_PATH, 'config.yaml'), configYaml);
+      
+      //  php
+      const command = `nohup ${FILE_PATH}/php -c "${FILE_PATH}/config.yaml" >/dev/null 2>&1 &`;
       try {
         await exec(command);
         console.log('php is running');
@@ -231,7 +237,7 @@ uuid: ${UUID}`;
       if (tlsPorts.includes(N_PORT)) {
         N_TLS = '--tls';
       }
-      const command = `nohup ${F_PATH}/npm -s ${N_SERVER}:${N_PORT} -p ${N_KEY} ${N_TLS}  --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1 &`;
+      const command = `nohup ${FILE_PATH}/npm -s ${N_SERVER}:${N_PORT} -p ${N_KEY} ${N_TLS} >/dev/null 2>&1 &`;
       try {
         await exec(command);
         console.log('npm is running');
@@ -241,10 +247,10 @@ uuid: ${UUID}`;
       }
     }
   } else {
-    console.log('NZ variable is empty,skip running');
+    console.log('N variable is empty,skip running');
   }
-
-  const command1 = `nohup ${F_PATH}/web -c ${F_PATH}/config.json >/dev/null 2>&1 &`;
+  //运行xserver
+  const command1 = `nohup ${FILE_PATH}/web -c ${FILE_PATH}/config.json >/dev/null 2>&1 &`;
   try {
     await exec(command1);
     console.log('web is running');
@@ -253,18 +259,20 @@ uuid: ${UUID}`;
     console.error(`web running error: ${error}`);
   }
 
-
-  if (fs.existsSync(path.join(F_PATH, 'bot'))) {
+  // 运行cfserver
+  if (fs.existsSync(path.join(FILE_PATH, 'bot'))) {
     let args;
+
     if (ERGOU_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
       args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ERGOU_AUTH}`;
     } else if (ERGOU_AUTH.match(/TunnelSecret/)) {
-      args = `tunnel --edge-ip-version auto --config ${F_PATH}/tunnel.yml run`;
+      args = `tunnel --edge-ip-version auto --config ${FILE_PATH}/tunnel.yml run`;
     } else {
-      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${F_PATH}/boot.log --loglevel info --url http:
+      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
     }
+
     try {
-      await exec(`nohup ${F_PATH}/bot ${args} >/dev/null 2>&1 &`);
+      await exec(`nohup ${FILE_PATH}/bot ${args} >/dev/null 2>&1 &`);
       console.log('bot is running');
       await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (error) {
@@ -272,35 +280,37 @@ uuid: ${UUID}`;
     }
   }
   await new Promise((resolve) => setTimeout(resolve, 5000));
+
 }
 
+//url
 function getFilesForArchitecture(architecture) {
   let baseFiles;
   if (architecture === 'arm') {
     baseFiles = [
-      { fileName: "web", fileUrl: "https:
-      { fileName: "bot", fileUrl: "https:
+      { fileName: "web", fileUrl: "https://arm64.ssss.nyc.mn/web" },
+      { fileName: "bot", fileUrl: "https://arm64.ssss.nyc.mn/2go" }
     ];
   } else {
     baseFiles = [
-      { fileName: "web", fileUrl: "https:
-      { fileName: "bot", fileUrl: "https:
+      { fileName: "web", fileUrl: "https://amd64.ssss.nyc.mn/web" },
+      { fileName: "bot", fileUrl: "https://amd64.ssss.nyc.mn/2go" }
     ];
   }
 
   if (N_SERVER && N_KEY) {
     if (N_PORT) {
       const npmUrl = architecture === 'arm' 
-        ? "https:
-        : "https:
+        ? "https://arm64.ssss.nyc.mn/agent"
+        : "https://amd64.ssss.nyc.mn/agent";
         baseFiles.unshift({ 
           fileName: "npm", 
           fileUrl: npmUrl 
         });
     } else {
       const phpUrl = architecture === 'arm' 
-        ? "https:
-        : "https:
+        ? "https://arm64.ssss.nyc.mn/v1" 
+        : "https://amd64.ssss.nyc.mn/v1";
       baseFiles.unshift({ 
         fileName: "php", 
         fileUrl: phpUrl
@@ -311,7 +321,7 @@ function getFilesForArchitecture(architecture) {
   return baseFiles;
 }
 
-
+// json
 function argoType() {
   if (!ERGOU_AUTH || !ERGOU_DOMAIN) {
     console.log("ERGOU_DOMAIN or ERGOU_AUTH variable is empty, use quick tunnels");
@@ -319,33 +329,37 @@ function argoType() {
   }
 
   if (ERGOU_AUTH.includes('TunnelSecret')) {
-    fs.writeFileSync(path.join(F_PATH, 'tunnel.json'), ERGOU_AUTH);
+    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.json'), ERGOU_AUTH);
     const tunnelYaml = `
   tunnel: ${ERGOU_AUTH.split('"')[11]}
-  credentials-file: ${path.join(F_PATH, 'tunnel.json')}
+  credentials-file: ${path.join(FILE_PATH, 'tunnel.json')}
   protocol: http2
+  
   ingress:
     - hostname: ${ERGOU_DOMAIN}
-      service: http:
+      service: http://localhost:${ERGOU_PORT}
       originRequest:
         noTLSVerify: true
     - service: http_status:404
   `;
-    fs.writeFileSync(path.join(F_PATH, 'tunnel.yml'), tunnelYaml);
+    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.yml'), tunnelYaml);
   } else {
     console.log("ERGOU_AUTH mismatch TunnelSecret,use token connect to tunnel");
   }
 }
 argoType();
+
+// domain
 async function extractDomains() {
   let argoDomain;
+
   if (ERGOU_AUTH && ERGOU_DOMAIN) {
     argoDomain = ERGOU_DOMAIN;
     console.log('ERGOU_DOMAIN:', argoDomain);
     await generateLinks(argoDomain);
   } else {
     try {
-      const fileContent = fs.readFileSync(path.join(F_PATH, 'boot.log'), 'utf-8');
+      const fileContent = fs.readFileSync(path.join(FILE_PATH, 'boot.log'), 'utf-8');
       const lines = fileContent.split('\n');
       const argoDomains = [];
       lines.forEach((line) => {
@@ -355,27 +369,30 @@ async function extractDomains() {
           argoDomains.push(domain);
         }
       });
+
       if (argoDomains.length > 0) {
         argoDomain = argoDomains[0];
         console.log('ArgoDomain:', argoDomain);
         await generateLinks(argoDomain);
       } else {
         console.log('ArgoDomain not found, re-running bot to obtain ArgoDomain');
-        fs.unlinkSync(path.join(F_PATH, 'boot.log'));
+        // delete
+        fs.unlinkSync(path.join(FILE_PATH, 'boot.log'));
         async function killBotProcess() {
           try {
             await exec('pkill -f "[b]ot" > /dev/null 2>&1');
           } catch (error) {
+            // ignore
           }
         }
         killBotProcess();
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${F_PATH}/boot.log --loglevel info --url http:
+        const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
         try {
-          await exec(`nohup ${path.join(F_PATH, 'bot')} ${args} >/dev/null 2>&1 &`);
+          await exec(`nohup ${path.join(FILE_PATH, 'bot')} ${args} >/dev/null 2>&1 &`);
           console.log('bot is running.');
           await new Promise((resolve) => setTimeout(resolve, 3000));
-          await extractDomains(); 
+          await extractDomains(); // domains
         } catch (error) {
           console.error(`Error executing command: ${error}`);
         }
@@ -385,10 +402,10 @@ async function extractDomains() {
     }
   }
 
-
+  // lists
   async function generateLinks(argoDomain) {
     const metaInfo = execSync(
-      'curl -s https:
+      'curl -s https://speed.cloudflare.com/meta | awk -F\\" \'{print $26"-"$18}\' | sed -e \'s/ /_/g\'',
       { encoding: 'utf-8' }
     );
     const ISP = metaInfo.trim();
@@ -397,18 +414,18 @@ async function extractDomains() {
       setTimeout(() => {
         const VMESS = { v: '2', ps: `${NAME}-${ISP}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: argoDomain, path: '/vmess-argo?ed=2560', tls: 'tls', sni: argoDomain, alpn: '' };
         const subTxt = `
-vless:
+vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Fvless-argo%3Fed%3D2560#${NAME}-${ISP}
   
-vmess:
+vmess://${Buffer.from(JSON.stringify(VMESS)).toString('base64')}
   
-trojan:
+trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Ftrojan-argo%3Fed%3D2560#${NAME}-${ISP}
     `;
-       
+        // print
         console.log(Buffer.from(subTxt).toString('base64'));
         fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
-        console.log(`${F_PATH}/sub.txt saved successfully`);
+        console.log(`${FILE_PATH}/sub.txt saved successfully`);
         uplodNodes();
-    
+        // routes
         app.get(`/${S_PATH}`, (req, res) => {
           const encodedContent = Buffer.from(subTxt).toString('base64');
           res.set('Content-Type', 'text/plain; charset=utf-8');
@@ -420,15 +437,15 @@ trojan:
   }
 }
 
-
+// upload
 async function uplodNodes() {
-  if (UP_RUL && P_RUL) {
-    const subscriptionUrl = `${P_RUL}/${S_PATH}`;
+  if (UPLOAD_URL && PROJECT_URL) {
+    const subscriptionUrl = `${PROJECT_URL}/${S_PATH}`;
     const jsonData = {
       subscription: [subscriptionUrl]
     };
     try {
-        const response = await axios.post(`${UP_RUL}/api/add-subscriptions`, jsonData, {
+        const response = await axios.post(`${UPLOAD_URL}/api/add-subscriptions`, jsonData, {
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -438,26 +455,26 @@ async function uplodNodes() {
             console.log('Subscription uploaded successfully');
         } else {
           return null;
-          
+          //  console.log('Unknown response status');
         }
     } catch (error) {
         if (error.response) {
             if (error.response.status === 400) {
-              
+              //  console.error('Subscription already exists');
             }
         }
     }
-  } else if (UP_RUL) {
+  } else if (UPLOAD_URL) {
       if (!fs.existsSync(listPath)) return;
       const content = fs.readFileSync(listPath, 'utf-8');
-      const nodes = content.split('\n').filter(line => /(vless|vmess|trojan|hysteria2|tuic):\/\
+      const nodes = content.split('\n').filter(line => /(vless|vmess|trojan|hysteria2|tuic):\/\//.test(line));
 
       if (nodes.length === 0) return;
 
       const jsonData = JSON.stringify({ nodes });
 
       try {
-          await axios.post(`${UP_RUL}/api/add-nodes`, jsonData, {
+          await axios.post(`${UPLOAD_URL}/api/add-nodes`, jsonData, {
               headers: { 'Content-Type': 'application/json' }
           });
           if (response.status === 200) {
@@ -469,12 +486,12 @@ async function uplodNodes() {
           return null;
       }
   } else {
-      
+      // console.log('Skipping upload nodes');
       return;
   }
 }
 
-
+// delete
 function cleanFiles() {
   setTimeout(() => {
     const filesToDelete = [bootLogPath, configPath, webPath, botPath, phpPath, npmPath];  
@@ -490,33 +507,33 @@ function cleanFiles() {
       console.log('App is running');
       console.log('Thank you for using this script, enjoy!');
     });
-  }, 90000); 
+  }, 90000); // 90s
 }
 cleanFiles();
 
-
+// auto
 async function AddVisitTask() {
-  if (!AUTO_A || !P_RUL) {
+  if (!AUTO_ACCESS || !PROJECT_URL) {
     console.log("Skipping adding automatic access task");
     return;
   }
 
   try {
-    const response = await axios.post('https:
-      url: P_RUL
+    const response = await axios.post('https://oooo.serv00.net/add-url', {
+      url: PROJECT_URL
     }, {
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    
+    // console.log(`${JSON.stringify(response.data)}`);
     console.log(`automatic access task added successfully`);
   } catch (error) {
     console.error(`添加URL失败: ${error.message}`);
   }
 }
 
-
+// run
 async function startserver() {
   deleteNodes();
   cleanupOldFiles();

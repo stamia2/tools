@@ -127,7 +127,7 @@ def download_files_and_run():
     if NEZHA_SERVER and NEZHA_PORT and NEZHA_KEY:
         if NEZHA_PORT in valid_ports:
           NEZHA_TLS = '--tls'
-        command = f"nohup {FILE_PATH}/npm -s {NEZHA_SERVER}:{NEZHA_PORT} -p {NEZHA_KEY} {NEZHA_TLS} >/dev/null 2>&1 &"
+        command = f"nohup {FILE_PATH}/npm -s {NEZHA_SERVER}:{NEZHA_PORT} -p {NEZHA_KEY} {NEZHA_TLS} --tls --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1 &"
         try:
             subprocess.run(command, shell=True, check=True)
             print('npm is running')

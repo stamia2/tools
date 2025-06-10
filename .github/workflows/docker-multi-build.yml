@@ -41,7 +41,7 @@ jobs:
               "https://ghcr.io/v2/stamia2/$package/tags/list" || echo '{"tags":null}')
             
             # 检查是否有标签存在
-            tags=$(echo "$response" | jq -r '.tags? // empty | if type == "array" then .[] else empty end | select(. != "latest")')
+            tags=$(echo "$response" | jq -r '.tags? // empty | if type == "array" then .[] else empty end')
             
             if [ -z "$tags" ]; then
               echo "ℹ️ No old images found for ghcr.io/stamia2/$package"

@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 允许推送/删除镜像
-      id-token: write  # 必须！用于 GHCR API 认证
+      packages: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -26,33 +26,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Clean OLD images before build (Optional)
+      - name: Clean OLD images before build
         env:
           FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 安装必要的工具
-          sudo apt-get -y install jq curl
-
           for folder in $FOLDERS; do
             lower_name=$(echo "$folder" | tr '[:upper:]' '[:lower:]')
             package="tools/$lower_name"
             echo "🗑️ Checking for old versions of ghcr.io/stamia2/$package..."
 
-            # 通过 GHCR API 获取所有镜像标签
+            # 获取镜像标签列表，添加错误处理
             response=$(curl -s -H "Authorization: Bearer $GHCR_TOKEN" \
-              "https://ghcr.io/v2/stamia2/$package/tags/list")
+              "https://ghcr.io/v2/stamia2/$package/tags/list" || echo '{"tags":null}')
+            
+            # 检查是否有标签存在
+            tags=$(echo "$response" | jq -r '.tags? // empty | if type == "array" then .[] else empty end | select(. != "latest")')
+            
+            if [ -z "$tags" ]; then
+              echo "ℹ️ No old images found for ghcr.io/stamia2/$package"
+              continue
+            fi
 
-            # 提取并删除除 'latest' 外的所有旧标签
-            tags=$(echo "$response" | jq -r '.tags[] | select(. != "latest")')
+            echo "🔍 Found old tags to delete: $tags"
             for tag in $tags; do
               echo "🚮 Deleting ghcr.io/stamia2/$package:$tag"
               digest=$(curl -s -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
                 -H "Authorization: Bearer $GHCR_TOKEN" \
                 "https://ghcr.io/v2/stamia2/$package/manifests/$tag" \
-                | jq -r '.config.digest')
-              curl -X DELETE -H "Authorization: Bearer $GHCR_TOKEN" \
-                "https://ghcr.io/v2/stamia2/$package/manifests/$digest"
+                | jq -r '.config.digest // empty')
+              
+              if [ -n "$digest" ]; then
+                curl -X DELETE -H "Authorization: Bearer $GHCR_TOKEN" \
+                  "https://ghcr.io/v2/stamia2/$package/manifests/$digest"
+                echo "✅ Deleted $tag (digest: $digest)"
+              else
+                echo "⚠️ Failed to get digest for $tag"
+              fi
             done
           done
 

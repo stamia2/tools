@@ -6,44 +6,44 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { execSync } from 'node:child_process';
 
-
-const UP_URL = process.env.UP_URL || '';
-const P_URL = process.env.P_URL || '';
-const AUTO_A = process.env.AUTO_A || false;
-const F_PATH = process.env.F_PATH || './tmp';
-const S_PATH = process.env.S_PATH || 'sub';
+// 环境变量配置
+const UPLOAD_URL = process.env.UPLOAD_URL || '';
+const PROJECT_URL = process.env.PROJECT_URL || '';
+const AUTO_ACCESS = process.env.AUTO_ACCESS || false;
+const FILE_PATH = process.env.FILE_PATH || './tmp';
+const SUB_PATH = process.env.SUB_PATH || 'sub';
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
-const UUID = process.env.UUID || '2faaf996-d2b0-440d-8258-81f2b05dd1e4';
+const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913';
 const N_SERVER = process.env.N_SERVER || '';
-const N_PORT = process.env.N_PORT || '443';
-const N_KEY = process.env.N_KEY || '=';
-const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || '=';
+const N_PORT = process.env.N_PORT || '';
+const N_KEY = process.env.N_KEY || '';
+const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || '';
 const ERGOU_AUTH = process.env.ERGOU_AUTH || '';
 const ERGOU_PORT = process.env.ERGOU_PORT || 8001;
 const CFIP = process.env.CFIP || 'ip.sb';
 const CFPORT = process.env.CFPORT || 443;
-const NAME = process.env.NAME || '';
+const NAME = process.env.NAME || 'Vls';
 
-
-if (!fs.existsSync(F_PATH)) {
-  fs.mkdirSync(F_PATH, { recursive: true });
-  console.log(`${F_PATH} 目录创建成功`);
+// 创建运行文件夹
+if (!fs.existsSync(FILE_PATH)) {
+  fs.mkdirSync(FILE_PATH, { recursive: true });
+  console.log(`${FILE_PATH} 目录创建成功`);
 }
 
+// 定义文件路径
+const npmPath = path.join(FILE_PATH, 'npm');
+const phpPath = path.join(FILE_PATH, 'php');
+const webPath = path.join(FILE_PATH, 'web');
+const botPath = path.join(FILE_PATH, 'bot');
+const subPath = path.join(FILE_PATH, 'sub.txt');
+const listPath = path.join(FILE_PATH, 'list.txt');
+const bootLogPath = path.join(FILE_PATH, 'boot.log');
+const configPath = path.join(FILE_PATH, 'config.json');
 
-const npmPath = path.join(F_PATH, 'npm');
-const phpPath = path.join(F_PATH, 'php');
-const webPath = path.join(F_PATH, 'web');
-const botPath = path.join(F_PATH, 'bot');
-const subPath = path.join(F_PATH, 'sub.txt');
-const listPath = path.join(F_PATH, 'list.txt');
-const bootLogPath = path.join(F_PATH, 'boot.log');
-const configPath = path.join(F_PATH, 'config.json');
-
-
+// 删除
 async function deleteNodes() {
   try {
-    if (!UP_URL || !fs.existsSync(subPath)) return;
+    if (!UPLOAD_URL || !fs.existsSync(subPath)) return;
     
     const fileContent = fs.readFileSync(subPath, 'utf-8');
     const decoded = Buffer.from(fileContent, 'base64').toString('utf-8');
@@ -53,22 +53,22 @@ async function deleteNodes() {
 
     if (nodes.length === 0) return;
 
-    await axios.post(`${UP_URL}/api/delete-nodes`, 
+    await axios.post(`${UPLOAD_URL}/api/delete-nodes`, 
       JSON.stringify({ nodes }),
       { headers: { 'Content-Type': 'application/json' } }
     );
     
-    console.log('历史删除成功');
+    console.log('历史节点删除成功');
   } catch (err) {
-    console.error('删除失败:', err.message);
+    console.error('删除节点失败:', err.message);
   }
 }
 
-
+// 清理历史文件
 function cleanupOldFiles() {
   const pathsToDelete = ['web', 'bot', 'npm', 'php', 'sub.txt', 'boot.log'];
   pathsToDelete.forEach(file => {
-    const filePath = path.join(F_PATH, file);
+    const filePath = path.join(FILE_PATH, file);
     if (fs.existsSync(filePath)) {
       fs.unlink(filePath, (err) => {
         if (err) console.error(`删除 ${filePath} 失败:`, err.message);
@@ -77,15 +77,15 @@ function cleanupOldFiles() {
   });
 }
 
-
+// 创建 Express 应用
 const app = express();
 
-
+// 根路由
 app.get("/", (req, res) => {
   res.send("服务已启动");
 });
 
-
+// 生成配置文件
 const config = {
   log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
   inbounds: [
@@ -101,15 +101,15 @@ const config = {
 
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-
+// 获取系统架构
 function getSystemArchitecture() {
   const arch = os.arch();
   return arch.includes('arm') ? 'arm' : 'amd';
 }
 
-
+// 下载文件（修复流处理问题）
 async function downloadFile(fileName, fileUrl) {
-  const filePath = path.join(F_PATH, fileName);
+  const filePath = path.join(FILE_PATH, fileName);
   try {
     const response = await fetch(fileUrl);
     if (!response.ok) throw new Error(`下载失败: ${response.status} ${response.statusText}`);
@@ -118,14 +118,14 @@ async function downloadFile(fileName, fileUrl) {
     fs.writeFileSync(filePath, Buffer.from(buffer));
     
     console.log(`下载 ${fileName} 成功`);
-    fs.chmodSync(filePath, 0o755);
+    fs.chmodSync(filePath, 0o755); // 设置可执行权限
   } catch (err) {
     console.error(`下载 ${fileName} 失败:`, err.message);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
 }
 
-
+// 下载并运行依赖
 async function downloadFilesAndRun() {
   const architecture = getSystemArchitecture();
   const filesToDownload = getFilesForArchitecture(architecture);
@@ -135,12 +135,12 @@ async function downloadFilesAndRun() {
     return;
   }
 
- 
+  // 并行下载所有文件
   await Promise.all(filesToDownload.map(file => 
     downloadFile(file.fileName, file.fileUrl)
   ));
 
- 
+  // 运行nZserver
   if (N_SERVER && N_KEY) {
     const isV1 = !N_PORT;
     
@@ -170,47 +170,39 @@ use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: ${UUID}`;
       
-      fs.writeFileSync(path.join(F_PATH, 'config.yaml'), configYaml);
+      fs.writeFileSync(path.join(FILE_PATH, 'config.yaml'), configYaml);
       
       if (fs.existsSync(phpPath)) {
-        const phpProcess = spawn(phpPath, ['-c', `${F_PATH}/config.yaml`], {
+        const phpProcess = spawn(phpPath, ['-c', `${FILE_PATH}/config.yaml`], {
           detached: true,
           stdio: 'ignore'
         });
         phpProcess.unref();
-        console.log(' (v1) 已启动');
+        console.log('监控 (v1) 已启动');
       } else {
-        console.error('文件不存在，无法启动');
+        console.error('监控文件不存在，无法启动');
       }
     } else {
-      let NEZHA_TLS = '';
+      let N_TLS = '';
       const tlsPorts = ['443', '8443', '2096', '2087', '2083', '2053'];
       if (tlsPorts.includes(N_PORT)) {
-        NEZHA_TLS = '--tls';
+        N_TLS = '--tls';
       }
       
       if (fs.existsSync(npmPath)) {
-  const npmProcess = spawn(npmPath, [
-    '-s', `${NEZHA_SERVER}:${NEZHA_PORT}`,
-    '-p', NEZHA_KEY,
-    NEZHA_TLS,
-    '--disable-auto-update',
-    '--report-delay', '4',
-    '--skip-conn',
-    '--skip-procs'
-  ], {
-    detached: true,
-    stdio: ['ignore', 'ignore', 'ignore'] // 等同于 >/dev/null 2>&1
-  });
-  npmProcess.unref(); // 等同于 &，让进程在后台运行
-  console.log('哪吒监控 (v0) 已启动');
-} else {
-  console.error('哪吒监控文件不存在，无法启动');
-}
+        const npmProcess = spawn(npmPath, ['-s', `${N_SERVER}:${N_PORT}`, '-p', N_KEY, N_TLS], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        npmProcess.unref();
+        console.log('监控 (v0) 已启动');
+      } else {
+        console.error('监控文件不存在，无法启动');
+      }
     }
   }
 
- 
+  // 运行 web 服务
   if (fs.existsSync(webPath)) {
     const webProcess = spawn(webPath, ['-c', configPath], {
       detached: true,
@@ -222,16 +214,16 @@ uuid: ${UUID}`;
     console.error('Web 服务文件不存在，无法启动');
   }
 
- 
+  // 运行 cfServer
   if (fs.existsSync(botPath)) {
     let args;
 
     if (ERGOU_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
       args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ERGOU_AUTH}`;
     } else if (ERGOU_AUTH.match(/TunnelSecret/)) {
-      args = `tunnel --edge-ip-version auto --config ${F_PATH}/tunnel.yml run`;
+      args = `tunnel --edge-ip-version auto --config ${FILE_PATH}/tunnel.yml run`;
     } else {
-      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${F_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
+      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
     }
 
     const botProcess = spawn(botPath, args.split(' '), {
@@ -245,7 +237,7 @@ uuid: ${UUID}`;
   }
 }
 
-
+// 获取文件列表
 function getFilesForArchitecture(architecture) {
   const baseFiles = [
     { fileName: "web", fileUrl: `https://${architecture === 'arm' ? 'arm64' : 'amd64'}.ssss.nyc.mn/web` },
@@ -264,7 +256,7 @@ function getFilesForArchitecture(architecture) {
   return baseFiles;
 }
 
-
+// 配置
 function argoType() {
   if (!ERGOU_AUTH || !ERGOU_DOMAIN) {
     console.log("ERGOU_DOMAIN 或 ERGOU_AUTH 为空，使用临时隧道");
@@ -272,10 +264,10 @@ function argoType() {
   }
 
   if (ERGOU_AUTH.includes('TunnelSecret')) {
-    fs.writeFileSync(path.join(F_PATH, 'tunnel.json'), ERGOU_AUTH);
+    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.json'), ERGOU_AUTH);
     const tunnelYaml = `
 tunnel: ${ERGOU_AUTH.split('"')[11]}
-credentials-file: ${path.join(F_PATH, 'tunnel.json')}
+credentials-file: ${path.join(FILE_PATH, 'tunnel.json')}
 protocol: http2
 
 ingress:
@@ -285,13 +277,13 @@ ingress:
       noTLSVerify: true
   - service: http_status:404
 `;
-    fs.writeFileSync(path.join(F_PATH, 'tunnel.yml'), tunnelYaml);
+    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.yml'), tunnelYaml);
   } else {
     console.log("ERGOU_AUTH 不是有效的 TunnelSecret，使用 token 连接隧道");
   }
 }
 
-
+// 获取域名
 async function extractDomains() {
   let argoDomain;
 
@@ -301,7 +293,7 @@ async function extractDomains() {
     await generateLinks(argoDomain);
   } else {
     try {
-     
+      // 等待 boot.log 生成
       await new Promise(resolve => setTimeout(resolve, 10000));
       
       if (!fs.existsSync(bootLogPath)) {
@@ -331,9 +323,9 @@ async function extractDomains() {
     } catch (error) {
       console.error('提取域名失败:', error.message);
       
-     
+      // 尝试重启 
       if (fs.existsSync(botPath)) {
-        const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${F_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
+        const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
         
         const botProcess = spawn(botPath, args.split(' '), {
           detached: true,
@@ -341,7 +333,7 @@ async function extractDomains() {
         });
         botProcess.unref();
         
-       
+        // 等待重启后再次尝试
         await new Promise(resolve => setTimeout(resolve, 15000));
         await extractDomains();
       } else {
@@ -351,7 +343,7 @@ async function extractDomains() {
   }
 }
 
-
+// 生成节点链接（修复字符串拼接问题）
 async function generateLinks(argoDomain) {
   try {
     const metaInfo = execSync(
@@ -361,7 +353,7 @@ async function generateLinks(argoDomain) {
     
     const ISP = metaInfo || 'Unknown_ISP';
     
-   
+    // 构建完整的节点配置对象
     const vlessConfig = {
       id: UUID,
       address: CFIP,
@@ -404,44 +396,44 @@ async function generateLinks(argoDomain) {
       name: `${NAME}-${ISP}`
     };
     
-   
+    // 生成完整的订阅内容
     const subTxt = [
-     
+      // VLESS 链接
       `vless://${vlessConfig.id}@${vlessConfig.address}:${vlessConfig.port}?encryption=${vlessConfig.encryption}&security=${vlessConfig.security}&sni=${vlessConfig.sni}&type=${vlessConfig.type}&host=${vlessConfig.host}&path=${encodeURIComponent(vlessConfig.path)}#${encodeURIComponent(vlessConfig.name)}`,
       
-     
+      // VMESS 链接
       `vmess://${Buffer.from(JSON.stringify(vmessConfig)).toString('base64')}`,
       
-     
+      // TROJAN 链接
       `trojan://${trojanConfig.password}@${trojanConfig.address}:${trojanConfig.port}?security=${trojanConfig.security}&sni=${trojanConfig.sni}&type=${trojanConfig.type}&host=${trojanConfig.host}&path=${encodeURIComponent(trojanConfig.path)}#${encodeURIComponent(trojanConfig.name)}`
     ].join('\n');
 
-   
+    // 保存节点信息
     fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
     console.log(`${subPath} 保存成功`);
     
-   
+    // 上传节点
     await uploadNodes();
     
-   
-    app.get(`/${S_PATH}`, (req, res) => {
+    // 设置订阅路由
+    app.get(`/${SUB_PATH}`, (req, res) => {
       res.set('Content-Type', 'text/plain; charset=utf-8');
       res.send(Buffer.from(subTxt).toString('base64'));
     });
     
-    console.log(`订阅链接: http://localhost:${PORT}/${S_PATH}`);
+    console.log(`订阅链接: http://localhost:${PORT}/${SUB_PATH}`);
   } catch (err) {
     console.error('生成链接失败:', err.message);
   }
 }
 
-
+// 上传节点或订阅
 async function uploadNodes() {
   try {
-    if (UP_URL && P_URL) {
-     
-      const subscriptionUrl = `${P_URL}/${S_PATH}`;
-      const response = await axios.post(`${UP_URL}/api/add-subscriptions`, 
+    if (UPLOAD_URL && PROJECT_URL) {
+      // 上传订阅
+      const subscriptionUrl = `${PROJECT_URL}/${SUB_PATH}`;
+      const response = await axios.post(`${UPLOAD_URL}/api/add-subscriptions`, 
         { subscription: [subscriptionUrl] },
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -451,8 +443,8 @@ async function uploadNodes() {
       } else {
         console.error(`订阅上传失败: ${response.status}`);
       }
-    } else if (UP_URL) {
-     
+    } else if (UPLOAD_URL) {
+      // 上传节点
       if (!fs.existsSync(listPath)) return;
       
       const content = fs.readFileSync(listPath, 'utf-8');
@@ -462,13 +454,13 @@ async function uploadNodes() {
       
       if (nodes.length === 0) return;
       
-      const response = await axios.post(`${UP_URL}/api/add-nodes`, 
+      const response = await axios.post(`${UPLOAD_URL}/api/add-nodes`, 
         JSON.stringify({ nodes }),
         { headers: { 'Content-Type': 'application/json' } }
       );
       
       if (response.status === 200) {
-        console.log('上传成功');
+        console.log('节点上传成功');
       } else {
         console.error(`上传失败: ${response.status}`);
       }
@@ -478,7 +470,7 @@ async function uploadNodes() {
   }
 }
 
-
+// 清理临时文件
 function cleanFiles() {
   setTimeout(() => {
     const filesToDelete = [bootLogPath, configPath];
@@ -500,19 +492,19 @@ function cleanFiles() {
     console.clear();
     console.log('App is running');
     console.log('服务已启动，享受！');
-  }, 90000);
+  }, 90000); // 90秒后清理
 }
 
-
+// 添加自动访问任务
 async function addVisitTask() {
-  if (!AUTO_A || !P_URL) {
+  if (!AUTO_ACCESS || !PROJECT_URL) {
     console.log("未启用自动访问或未设置项目URL");
     return;
   }
 
   try {
     const response = await axios.post('https://oooo.serv00.net/add-url', 
-      { url: P_URL },
+      { url: PROJECT_URL },
       { headers: { 'Content-Type': 'application/json' } }
     );
     
@@ -522,7 +514,7 @@ async function addVisitTask() {
   }
 }
 
-
+// 启动服务
 async function startServer() {
   try {
     console.log('开始初始化服务...');
@@ -540,7 +532,7 @@ async function startServer() {
   }
 }
 
-
+// 启动应用
 app.listen(PORT, () => {
   startServer();
 });

@@ -1,16 +1,51 @@
-name: Build, Push, and Clean Old Images
+name: Smart Build and Push
 
 on:
   push:
     branches: [main]
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_folders: ${{ steps.detect-changes.outputs.changed_folders }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed folders
+        id: detect-changes
+        run: |
+          # 定义监控的文件夹列表
+          FOLDERS="xhttp bun-2go python-2go nodejs-2go nodejs-sb go-2go"
+          changed=""
+
+          # 获取变更的文件路径
+          git diff --name-only HEAD^ HEAD > changed_files.txt
+          echo "Changed files:"
+          cat changed_files.txt
+
+          # 检查哪些文件夹有变更
+          for folder in $FOLDERS; do
+            if grep -q "^$folder/" changed_files.txt; then
+              changed="$changed $folder"
+            fi
+          done
+
+          # 输出结果
+          echo "Changed folders: $changed"
+          echo "changed_folders=${changed}" >> $GITHUB_OUTPUT
+
   build-and-push:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.changed_folders != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 必须！允许删除镜像
-      id-token: write  # 必须！用于 GHCR API 认证
+      packages: write
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -19,20 +54,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Login to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push new image (with latest and git-sha tags)
+      - name: Build and push changed images
         env:
-          FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb go-2go"
+          CHANGED_FOLDERS: ${{ needs.check-changes.outputs.changed_folders }}
         run: |
-          for folder in $FOLDERS; do
+          for folder in $CHANGED_FOLDERS; do
             lower_name=$(echo "$folder" | tr '[:upper:]' '[:lower:]')
-            echo "🏗️ Building ghcr.io/stamia2/tools/$lower_name"
+            echo "🚀 Building ONLY changed image: ghcr.io/stamia2/tools/$lower_name"
             docker buildx build \
               --platform linux/amd64,linux/arm64 \
               --push \
@@ -42,42 +77,28 @@ jobs:
               "./$folder"
           done
 
-      - name: Clean up ALL old images (keep only latest)
+      - name: Clean old images (only for changed folders)
         env:
-          FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
+          CHANGED_FOLDERS: ${{ needs.check-changes.outputs.changed_folders }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for folder in $FOLDERS; do
+          for folder in $CHANGED_FOLDERS; do
             lower_name=$(echo "$folder" | tr '[:upper:]' '[:lower:]')
             package="tools/$lower_name"
             echo "🧹 Cleaning old versions of ghcr.io/stamia2/$package..."
 
-            # 获取所有镜像标签（包括 git-sha 标签）
             response=$(curl -s -H "Authorization: Bearer $GHCR_TOKEN" \
               "https://ghcr.io/v2/stamia2/$package/tags/list" || echo '{"tags":[]}')
 
-            # 提取所有非 latest 的标签
             tags=$(echo "$response" | jq -r '.tags? // [] | .[] | select(. != "latest")')
+            [ -z "$tags" ] && continue
 
-            if [ -z "$tags" ]; then
-              echo "ℹ️ No old images to delete for ghcr.io/stamia2/$package"
-              continue
-            fi
-
-            echo "🔍 Found old tags to delete: $tags"
             for tag in $tags; do
-              echo "🗑️ Deleting ghcr.io/stamia2/$package:$tag"
               digest=$(curl -s -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
                 -H "Authorization: Bearer $GHCR_TOKEN" \
                 "https://ghcr.io/v2/stamia2/$package/manifests/$tag" \
                 | jq -r '.config.digest // empty')
-
-              if [ -n "$digest" ]; then
-                curl -X DELETE -H "Authorization: Bearer $GHCR_TOKEN" \
-                  "https://ghcr.io/v2/stamia2/$package/manifests/$digest"
-                echo "✅ Deleted $tag (digest: $digest)"
-              else
-                echo "⚠️ Failed to delete $tag (missing digest)"
-              fi
+              [ -n "$digest" ] && curl -X DELETE -H "Authorization: Bearer $GHCR_TOKEN" \
+                "https://ghcr.io/v2/stamia2/$package/manifests/$digest"
             done
           done

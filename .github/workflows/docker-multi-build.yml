@@ -28,7 +28,7 @@ jobs:
 
       - name: Build and push new image (with latest and git-sha tags)
         env:
-          FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb"
+          FOLDERS: "xhttp bun-2go python-2go nodejs-2go nodejs-sb go-2go"
         run: |
           for folder in $FOLDERS; do
             lower_name=$(echo "$folder" | tr '[:upper:]' '[:lower:]')

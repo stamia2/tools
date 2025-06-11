@@ -81,7 +81,7 @@ server_thread.start()
 
 # Generate  config file
 def generate_config():
-    config ={"log":{"access":"/dev/null","error":"/dev/null","loglevel":"none",},"inbounds":[{"port":ERGOU_PORT ,"protocol":"vless","settings":{"clients":[{"id":UUID ,"flow":"xtls-rprx-vision",},],"decryption":"none","fallbacks":[{"dest":3001 },{"path":"/vless-argo","dest":3002 },{"path":"/vmess-argo","dest":3003 },{"path":"/trojan-argo","dest":3004 },],},"streamSettings":{"network":"tcp",},},{"port":3001 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID },],"decryption":"none"},"streamSettings":{"network":"ws","security":"none"}},{"port":3002 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID ,"level":0 }],"decryption":"none"},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/vless-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3003 ,"listen":"127.0.0.1","protocol":"vmess","settings":{"clients":[{"id":UUID ,"alterId":0 }]},"streamSettings":{"network":"ws","wsSettings":{"path":"/vmess-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3004 ,"listen":"127.0.0.1","protocol":"trojan","settings":{"clients":[{"password":UUID },]},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/trojan-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},],"dns":{"servers":["https+local://8.8.8.8/dns-query"]},"outbounds":[{"protocol":"freedom","tag": "direct" },{"protocol":"blackhole","tag":"block"}]}
+    config ={"log":{"access":"/dev/null","error":"/dev/null","loglevel":"none",},"inbounds":[{"port":ERGOU_PORT ,"protocol":"vless","settings":{"clients":[{"id":UUID ,"flow":"xtls-rprx-vision",},],"decryption":"none","fallbacks":[{"dest":3001 },{"path":"/vless-ergou","dest":3002 },{"path":"/vmess-ergou","dest":3003 },{"path":"/trojan-ergou","dest":3004 },],},"streamSettings":{"network":"tcp",},},{"port":3001 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID },],"decryption":"none"},"streamSettings":{"network":"ws","security":"none"}},{"port":3002 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID ,"level":0 }],"decryption":"none"},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/vless-ergou"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3003 ,"listen":"127.0.0.1","protocol":"vmess","settings":{"clients":[{"id":UUID ,"alterId":0 }]},"streamSettings":{"network":"ws","wsSettings":{"path":"/vmess-ergou"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3004 ,"listen":"127.0.0.1","protocol":"trojan","settings":{"clients":[{"password":UUID },]},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/trojan-ergou"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},],"dns":{"servers":["https+local://8.8.8.8/dns-query"]},"outbounds":[{"protocol":"freedom","tag": "direct" },{"protocol":"blackhole","tag":"block"}]}
     with open(os.path.join(FILE_PATH, 'config.json'), 'w', encoding='utf-8') as config_file:
         json.dump(config, config_file, ensure_ascii=False, indent=2)
 
@@ -127,7 +127,7 @@ def download_files_and_run():
     if N_SERVER and N_PORT and N_KEY:
         if N_PORT in valid_ports:
           N_TLS = '--tls'
-        command = f"nohup {FILE_PATH}/npm -s {N_SERVER}:{N_PORT} -p {N_KEY} {N_TLS} >/dev/null 2>&1 &"
+        command = f"nohup {FILE_PATH}/npm -s {N_SERVER}:{N_PORT} -p {N_KEY} {N_TLS} --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1"
         try:
             subprocess.run(command, shell=True, check=True)
             print('npm is running')
@@ -214,7 +214,7 @@ def authorize_files(file_paths):
 
 
 # Get fixed  JSON and yml
-def argo_config():
+def ergou_config():
     if not ERGOU_AUTH or not ERGOU_DOMAIN:
         print("ERGOU_DOMAIN or ERGOU_AUTH is empty, use quick Tunnels")
         return
@@ -239,16 +239,16 @@ ingress:
     else:
         print("Use token connect to tunnel")
 
-argo_config()
+ergou_config()
 
 # Get temporary  domain
 def extract_domains():
-    argo_domain = ''
+    ergou_domain = ''
 
     if ERGOU_AUTH and ERGOU_DOMAIN:
-        argo_domain = ERGOU_DOMAIN
-        print('ERGOU_DOMAIN:', argo_domain)
-        generate_links(argo_domain)
+        ergou_domain = ERGOU_DOMAIN
+        print('ERGOU_DOMAIN:', ergou_domain)
+        generate_links(ergou_domain)
     else:
         try:
             with open(os.path.join(FILE_PATH, 'boot.log'), 'r', encoding='utf-8') as file:
@@ -256,11 +256,11 @@ def extract_domains():
                 # Use regular expressions to match domain ending in trycloudflare.com
                 match = re.search(r'https://([^ ]+\.trycloudflare\.com)', content)
                 if match:
-                    argo_domain = match.group(1)
-                    print('ArgoDomain:', argo_domain)
-                    generate_links(argo_domain)
+                    ergou_domain = match.group(1)
+                    print('ErgouDomain:', ergou_domain)
+                    generate_links(ergou_domain)
                 else:
-                    print('ArgoDomain not found, re-running bot to obtain ArgoDomain')
+                    print('ErgouDomain not found, re-running bot to obtain ErgouDomain')
                     # 结束现有bot进程
                     try:
                         subprocess.run("pkill -f 'bot tunnel'", shell=True)
@@ -286,12 +286,12 @@ def extract_domains():
                                 content = file.read()
                                 match = re.search(r'https://([^ ]+\.trycloudflare\.com)', content)
                                 if match:
-                                    argo_domain = match.group(1)
-                                    print('ArgoDomain:', argo_domain)
-                                    generate_links(argo_domain)
+                                    ergou_domain = match.group(1)
+                                    print('ErgouDomain:', ergou_domain)
+                                    generate_links(ergou_domain)
                                     break
                             if attempt < max_retries - 1:
-                                print('ArgoDomain not found, retrying...')
+                                print('ErgouDomain not found, retrying...')
                                 subprocess.run("pkill -f 'bot tunnel'", shell=True)
                                 time.sleep(2)
                         except subprocess.CalledProcessError as e:
@@ -299,7 +299,7 @@ def extract_domains():
                         except Exception as e:
                             print(f"Error: {e}")
                     else:  
-                        print("Failed to obtain ArgoDomain after maximum retries")
+                        print("Failed to obtain ErgouDomain after maximum retries")
         except IndexError as e:
             print(f"IndexError while reading boot.log: {e}")
         except Exception as e:
@@ -307,20 +307,20 @@ def extract_domains():
 
 
 # Generate list and sub info
-def generate_links(argo_domain):
+def generate_links(ergou_domain):
     meta_info = subprocess.run(['curl', '-s', 'https://speed.cloudflare.com/meta'], capture_output=True, text=True)
     meta_info = meta_info.stdout.split('"')
     ISP = f"{meta_info[25]}-{meta_info[17]}".replace(' ', '_').strip()
 
     time.sleep(2)
-    VMESS = {"v": "2", "ps": f"{NAME}-{ISP}", "add": CFIP, "port": CFPORT, "id": UUID, "aid": "0", "scy": "none", "net": "ws", "type": "none", "host": argo_domain, "path": "/vmess-argo?ed=2048", "tls": "tls", "sni": argo_domain, "alpn": ""}
+    VMESS = {"v": "2", "ps": f"{NAME}-{ISP}", "add": CFIP, "port": CFPORT, "id": UUID, "aid": "0", "scy": "none", "net": "ws", "type": "none", "host": ergou_domain, "path": "/vmess-ergou?ed=2048", "tls": "tls", "sni": ergou_domain, "alpn": ""}
  
     list_txt = f"""
-vless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&type=ws&host={argo_domain}&path=%2Fvless-argo%3Fed%3D2048#{NAME}-{ISP}
+vless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={ergou_domain}&type=ws&host={ergou_domain}&path=%2Fvless-ergou%3Fed%3D2048#{NAME}-{ISP}
   
 vmess://{ base64.b64encode(json.dumps(VMESS).encode('utf-8')).decode('utf-8')}
 
-trojan://{UUID}@{CFIP}:{CFPORT}?security=tls&sni={argo_domain}&type=ws&host={argo_domain}&path=%2Ftrojan-argo%3Fed%3D2048#{NAME}-{ISP}
+trojan://{UUID}@{CFIP}:{CFPORT}?security=tls&sni={ergou_domain}&type=ws&host={ergou_domain}&path=%2Ftrojan-ergou%3Fed%3D2048#{NAME}-{ISP}
     """
     
     with open(os.path.join(FILE_PATH, 'list.txt'), 'w', encoding='utf-8') as list_file:

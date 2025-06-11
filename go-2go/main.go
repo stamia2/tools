@@ -53,7 +53,7 @@ func loadConfig() *Config {
 		ErgouDomain:   getEnv("ERGOU_DOMAIN", ""),
 		ErgouAuth:     getEnv("ERGOU_AUTH", ""),
 		ErgouPort:     getEnvAsInt("ERGOU_PORT", 8001),
-		CFIP:         getEnv("CFIP", "www.visa.com.tw"),
+		CFIP:         getEnv("CFIP", "ip.sb"),
 		CFPort:       getEnvAsInt("CFPORT", 443),
 		Name:         getEnv("NAME", "Vls"),
 	}
@@ -375,9 +375,9 @@ func generateXRayConfig(cfg *Config) {
 					"decryption": "none",
 					"fallbacks": []map[string]interface{}{
 						{"dest": 3001},
-						{"path": "/vless-argo", "dest": 3002},
-						{"path": "/vmess-argo", "dest": 3003},
-						{"path": "/trojan-argo", "dest": 3004},
+						{"path": "/vless-ergou", "dest": 3002},
+						{"path": "/vmess-ergou", "dest": 3003},
+						{"path": "/trojan-ergou", "dest": 3004},
 					},
 				},
 				StreamSettings: map[string]interface{}{
@@ -429,7 +429,7 @@ func generateXRayConfig(cfg *Config) {
 				"network":  "ws",
 				"security": "none",
 				"wsSettings": map[string]interface{}{
-					"path": "/vless-argo",
+					"path": "/vless-ergou",
 				},
 			},
 			Sniffing: map[string]interface{}{
@@ -450,7 +450,7 @@ func generateXRayConfig(cfg *Config) {
 			StreamSettings: map[string]interface{}{
 				"network": "ws",
 				"wsSettings": map[string]interface{}{
-					"path": "/vmess-argo",
+					"path": "/vmess-ergou",
 				},
 			},
 			Sniffing: map[string]interface{}{
@@ -472,7 +472,7 @@ func generateXRayConfig(cfg *Config) {
 				"network":  "ws",
 				"security": "none",
 				"wsSettings": map[string]interface{}{
-					"path": "/trojan-argo",
+					"path": "/trojan-ergou",
 				},
 			},
 			Sniffing: map[string]interface{}{
@@ -552,7 +552,15 @@ uuid: %s`, cfg.NzKey, cfg.NzServer, cfg.UUID)
 				log.Println("php is running")
 			}
 		} else {
-			nzArgs := []string{"-s", fmt.Sprintf("%s:%s", cfg.NzServer, cfg.NzPort), "-p", cfg.NzKey}
+			nzArgs := []string{
+    			  "-s", fmt.Sprintf("%s:%s", cfg.NzServer, cfg.NzPort),
+   			  "-p", cfg.NzKey,
+    			  "--tls",
+   			  "--disable-auto-update",
+   			  "--report-delay", "4",
+   			  "--skip-conn",
+  			  "--skip-procs",
+			}
 			
 			// 检查是否需要TLS
 			tlsPorts := []string{"443", "8443", "2096", "2087", "2083", "2053"}
@@ -571,7 +579,7 @@ uuid: %s`, cfg.NzKey, cfg.NzServer, cfg.UUID)
 			}
 		}
 	} else {
-		log.Println("NEZHA variable is empty, skipping running")
+		log.Println("nzserver variable is empty, skipping running")
 	}
 
 	// 运行
@@ -689,7 +697,7 @@ func extractDomains(cfg *Config) (string, error) {
 }
 
 // 生成订阅链接
-func generateLinks(cfg *Config, argoDomain string) error {
+func generateLinks(cfg *Config, ergouDomain string) error {
 	cmd := exec.Command("curl", "-s", "https://speed.cloudflare.com/meta")
 	output, err := cmd.Output()
 	if err != nil {
@@ -715,10 +723,10 @@ func generateLinks(cfg *Config, argoDomain string) error {
 		"scy":  "none",
 		"net":  "ws",
 		"type": "none",
-		"host": argoDomain,
-		"path": "/vmess-argo?ed=2048",
+		"host": ergouDomain,
+		"path": "/vmess-ergou?ed=2048",
 		"tls":  "tls",
-		"sni":  argoDomain,
+		"sni":  ergouDomain,
 		"alpn": "",
 	}
 
@@ -729,15 +737,15 @@ func generateLinks(cfg *Config, argoDomain string) error {
 
 	// 生成订阅内容
 	subContent := fmt.Sprintf(`
-vless://%s@%s:%d?encryption=none&security=tls&sni=%s&type=ws&host=%s&path=%%2Fvless-argo%%3Fed%%3D2048#%s-%s
+vless://%s@%s:%d?encryption=none&security=tls&sni=%s&type=ws&host=%s&path=%%2Fvless-ergou%%3Fed%%3D2048#%s-%s
 
 vmess://%s
 
-trojan://%s@%s:%d?security=tls&sni=%s&type=ws&host=%s&path=%%2Ftrojan-argo%%3Fed%%3D2048#%s-%s
+trojan://%s@%s:%d?security=tls&sni=%s&type=ws&host=%s&path=%%2Ftrojan-ergou%%3Fed%%3D2048#%s-%s
 `,
-		cfg.UUID, cfg.CFIP, cfg.CFPort, argoDomain, argoDomain, cfg.Name, isp,
+		cfg.UUID, cfg.CFIP, cfg.CFPort, ergouDomain, ergouDomain, cfg.Name, isp,
 		base64.StdEncoding.EncodeToString(vmessBytes),
-		cfg.UUID, cfg.CFIP, cfg.CFPort, argoDomain, argoDomain, cfg.Name, isp,
+		cfg.UUID, cfg.CFIP, cfg.CFPort, ergouDomain, ergouDomain, cfg.Name, isp,
 	)
 
 	// 保存到文件
@@ -786,12 +794,12 @@ func startServices(cfg *Config) error {
 	startServer(cfg)
 
 	// 提取域名并生成链接
-	argoDomain, err := extractDomains(cfg)
+	ergouDomain, err := extractDomains(cfg)
 	if err != nil {
 		return fmt.Errorf("Failed to extract domain: %v", err)
 	}
 
-	if err := generateLinks(cfg, argoDomain); err != nil {
+	if err := generateLinks(cfg, ergouDomain); err != nil {
 		return fmt.Errorf("Failed to generate links: %v", err)
 	}
 

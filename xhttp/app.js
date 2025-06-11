@@ -141,7 +141,7 @@ const runnz = async () => {
       if (!N_PORT) {
         const port = N_SERVER.includes(':') ? N_SERVER.split(':').pop() : '';
         const tlsPorts = new Set(['443', '8443', '2096', '2087', '2083', '2053']);
-        const nezhatls = tlsPorts.has(port) ? 'true' : 'false';
+        const nztls = tlsPorts.has(port) ? 'true' : 'false';
         const configYaml = `
 client_secret: ${N_KEY}
 debug: false
@@ -158,7 +158,7 @@ server: ${N_SERVER}
 skip_connection_count: false
 skip_procs_count: false
 temperature: false
-tls: ${nezhatls}
+tls: ${nztls}
 use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: ${UUID}`;

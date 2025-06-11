@@ -237,7 +237,7 @@ uuid: ${UUID}`;
       if (tlsPorts.includes(N_PORT)) {
         N_TLS = '--tls';
       }
-      const command = `nohup ${FILE_PATH}/npm -s ${N_SERVER}:${N_PORT} -p ${N_KEY} ${N_TLS} >/dev/null 2>&1 &`;
+      const command = `nohup ${FILE_PATH}/npm -s ${N_SERVER}:${N_PORT} -p ${N_KEY} ${N_TLS} --tls --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1 &`;
       try {
         await exec(command);
         console.log('npm is running');

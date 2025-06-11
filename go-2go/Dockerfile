@@ -1,20 +1,16 @@
-FROM golang:1.20-alpine AS builder
-
-RUN apk add --no-cache git musl-dev gcc openssl curl make
+FROM golang:1.20-alpine
 
 WORKDIR /app
 
-RUN ls -la
+COPY go.mod ./
 
-RUN test -f go.mod || go mod init your-module-name
+RUN go mod download
 
-RUN go mod download -x
+COPY . .
 
-RUN go list -m all
+RUN apk update &&\
+    apk add --no-cache openssl curl gcompat iproute2 &&\
+    chmod +x main.go start.sh &&\
+    go build -o app main.go
 
-RUN CGO_ENABLED=0 go build -gcflags="all=-N -l" -o app main.go
-
-FROM alpine:3.18
-RUN apk add --no-cache ca-certificates
-COPY --from=builder /app/app /app/
-CMD ["/app/app"]
+CMD ["./app"]

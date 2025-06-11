@@ -90,11 +90,11 @@ app.get("/", function(req, res) {
 const config = {
   log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
   inbounds: [
-    { port: ERGOU_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 3001 }, { path: "/vless-argo", dest: 3002 }, { path: "/vmess-argo", dest: 3003 }, { path: "/trojan-argo", dest: 3004 }] }, streamSettings: { network: 'tcp' } },
+    { port: ERGOU_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 3001 }, { path: "/vless-ergou", dest: 3002 }, { path: "/vmess-ergou", dest: 3003 }, { path: "/trojan-ergou", dest: 3004 }] }, streamSettings: { network: 'tcp' } },
     { port: 3001, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID }], decryption: "none" }, streamSettings: { network: "tcp", security: "none" } },
-    { port: 3002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
-    { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
-    { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless-ergou" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess-ergou" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan-ergou" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
   ],
   dns: { servers: ["https+local:
   outbounds: [ { protocol: "freedom", tag: "direct" }, {protocol: "blackhole", tag: "block"} ]
@@ -322,7 +322,7 @@ function getFilesForArchitecture(architecture) {
 }
 
 
-function argoType() {
+function ergouType() {
   if (!ERGOU_AUTH || !ERGOU_DOMAIN) {
     console.log("ERGOU_DOMAIN or ERGOU_AUTH variable is empty, use quick tunnels");
     return;
@@ -347,35 +347,35 @@ function argoType() {
     console.log("ERGOU_AUTH mismatch TunnelSecret,use token connect to tunnel");
   }
 }
-argoType();
+ergouType();
 
 
 async function extractDomains() {
-  let argoDomain;
+  let ergouDomain;
 
   if (ERGOU_AUTH && ERGOU_DOMAIN) {
-    argoDomain = ERGOU_DOMAIN;
-    console.log('ERGOU_DOMAIN:', argoDomain);
-    await generateLinks(argoDomain);
+    ergouDomain = ERGOU_DOMAIN;
+    console.log('ERGOU_DOMAIN:', ergouDomain);
+    await generateLinks(ergouDomain);
   } else {
     try {
       const fileContent = fs.readFileSync(path.join(F_PATH, 'boot.log'), 'utf-8');
       const lines = fileContent.split('\n');
-      const argoDomains = [];
+      const ergouDomains = [];
       lines.forEach((line) => {
         const domainMatch = line.match(/https?:\/\/([^ ]*trycloudflare\.com)\/?/);
         if (domainMatch) {
           const domain = domainMatch[1];
-          argoDomains.push(domain);
+          ergouDomains.push(domain);
         }
       });
 
-      if (argoDomains.length > 0) {
-        argoDomain = argoDomains[0];
-        console.log('ArgoDomain:', argoDomain);
-        await generateLinks(argoDomain);
+      if (ergouDomains.length > 0) {
+        ergouDomain = ergouDomains[0];
+        console.log('ErgouDomain:', ergouDomain);
+        await generateLinks(ergouDomain);
       } else {
-        console.log('ArgoDomain not found, re-running bot to obtain ArgoDomain');
+        console.log('ErgouDomain not found, re-running bot to obtain ErgouDomain');
         
         fs.unlinkSync(path.join(F_PATH, 'boot.log'));
         async function killBotProcess() {
@@ -403,7 +403,7 @@ async function extractDomains() {
   }
 
   
-  async function generateLinks(argoDomain) {
+  async function generateLinks(ergouDomain) {
     const metaInfo = execSync(
       'curl -s https:
       { encoding: 'utf-8' }
@@ -412,7 +412,7 @@ async function extractDomains() {
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        const VMESS = { v: '2', ps: `${NAME}-${ISP}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: argoDomain, path: '/vmess-argo?ed=2560', tls: 'tls', sni: argoDomain, alpn: '' };
+        const VMESS = { v: '2', ps: `${NAME}-${ISP}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: ergouDomain, path: '/vmess-ergou?ed=2560', tls: 'tls', sni: ergouDomain, alpn: '' };
         const subTxt = `
 vless:
   

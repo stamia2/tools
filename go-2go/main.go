@@ -555,7 +555,6 @@ uuid: %s`, cfg.NzKey, cfg.NzServer, cfg.UUID)
 			nzArgs := []string{
     			  "-s", fmt.Sprintf("%s:%s", cfg.NzServer, cfg.NzPort),
    			  "-p", cfg.NzKey,
-    			  "--tls",
    			  "--disable-auto-update",
    			  "--report-delay", "4",
    			  "--skip-conn",

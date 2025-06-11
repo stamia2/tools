@@ -89,11 +89,11 @@ app.get("/", (req, res) => {
 const config = {
   log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
   inbounds: [
-    { port: ERGOU_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 3001 }, { path: "/vless-argo", dest: 3002 }, { path: "/vmess-argo", dest: 3003 }, { path: "/trojan-argo", dest: 3004 }] }, streamSettings: { network: 'tcp' } },
+    { port: ERGOU_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 3001 }, { path: "/vless-ergou", dest: 3002 }, { path: "/vmess-ergou", dest: 3003 }, { path: "/trojan-ergou", dest: 3004 }] }, streamSettings: { network: 'tcp' } },
     { port: 3001, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID }], decryption: "none" }, streamSettings: { network: "tcp", security: "none" } },
-    { port: 3002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
-    { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
-    { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless-ergou" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess-ergou" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan-ergou" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
   ],
   dns: { servers: ["https+local://8.8.8.8/dns-query"] },
   outbounds: [ { protocol: "freedom", tag: "direct" }, { protocol: "blackhole", tag: "block" } ]
@@ -189,14 +189,27 @@ uuid: ${UUID}`;
         N_TLS = '--tls';
       }
       
-      if (fs.existsSync(npmPath)) {
-        const npmProcess = spawn(npmPath, ['-s', `${N_SERVER}:${N_PORT}`, '-p', N_KEY, N_TLS], {
-          detached: true,
-          stdio: 'ignore'
-        });
-        npmProcess.unref();
-        console.log('监控 (v0) 已启动');
-      } else {
+      if (Bun.file(npmPath).exists()) {
+        const npmProcess = Bun.spawn([
+          npmPath,
+		  '-s', `${N_SERVER}:${N_PORT}`,
+		  '-p', N_KEY,
+		  N_TLS,
+		  '--tls',
+		  '--disable-auto-update',
+		  '--report-delay', '4',
+		  '--skip-conn',
+		  '--skip-procs'
+	    ], {
+		  detached: true,
+		  stdio: 'ignore'
+		});
+  
+  // 在Bun中需要显式退出子进程
+  npmProcess.unref();
+  console.log('监控 (v0) 已启动');
+}
+     else {
         console.error('监控文件不存在，无法启动');
       }
     }
@@ -257,7 +270,7 @@ function getFilesForArchitecture(architecture) {
 }
 
 // 配置
-function argoType() {
+function ergouType() {
   if (!ERGOU_AUTH || !ERGOU_DOMAIN) {
     console.log("ERGOU_DOMAIN 或 ERGOU_AUTH 为空，使用临时隧道");
     return;
@@ -285,12 +298,12 @@ ingress:
 
 // 获取域名
 async function extractDomains() {
-  let argoDomain;
+  let ergouDomain;
 
   if (ERGOU_AUTH && ERGOU_DOMAIN) {
-    argoDomain = ERGOU_DOMAIN;
-    console.log('使用固定隧道域名:', argoDomain);
-    await generateLinks(argoDomain);
+    ergouDomain = ERGOU_DOMAIN;
+    console.log('使用固定隧道域名:', ergouDomain);
+    await generateLinks(ergouDomain);
   } else {
     try {
       // 等待 boot.log 生成
@@ -303,19 +316,19 @@ async function extractDomains() {
       
       const fileContent = fs.readFileSync(bootLogPath, 'utf-8');
       const lines = fileContent.split('\n');
-      const argoDomains = [];
+      const ergouDomains = [];
       
       lines.forEach((line) => {
         const domainMatch = line.match(/https?:\/\/([^ ]*trycloudflare\.com)\/?/);
         if (domainMatch) {
-          argoDomains.push(domainMatch[1]);
+          ergouDomains.push(domainMatch[1]);
         }
       });
 
-      if (argoDomains.length > 0) {
-        argoDomain = argoDomains[0];
-        console.log('获取临时隧道域名:', argoDomain);
-        await generateLinks(argoDomain);
+      if (ergouDomains.length > 0) {
+        ergouDomain = ergouDomains[0];
+        console.log('获取临时隧道域名:', ergouDomain);
+        await generateLinks(ergouDomain);
       } else {
         console.log('未找到隧道域名，尝试重启 tunnel');
         throw new Error('未找到隧道域名');
@@ -344,7 +357,7 @@ async function extractDomains() {
 }
 
 // 生成节点链接（修复字符串拼接问题）
-async function generateLinks(argoDomain) {
+async function generateLinks(ergouDomain) {
   try {
     const metaInfo = execSync(
       'curl -s https://speed.cloudflare.com/meta | awk -F\\" \'{print $26"-"$18}\' | sed -e \'s/ /_/g\'',
@@ -360,10 +373,10 @@ async function generateLinks(argoDomain) {
       port: CFPORT,
       encryption: 'none',
       security: 'tls',
-      sni: argoDomain,
+      sni: ergouDomain,
       type: 'ws',
-      host: argoDomain,
-      path: '/vless-argo?ed=2560',
+      host: ergouDomain,
+      path: '/vless-ergou?ed=2560',
       name: `${NAME}-${ISP}`
     };
     
@@ -377,10 +390,10 @@ async function generateLinks(argoDomain) {
       scy: 'none',
       net: 'ws',
       type: 'none',
-      host: argoDomain,
-      path: '/vmess-argo?ed=2560',
+      host: ergouDomain,
+      path: '/vmess-ergou?ed=2560',
       tls: 'tls',
-      sni: argoDomain,
+      sni: ergouDomain,
       alpn: ''
     };
     
@@ -389,10 +402,10 @@ async function generateLinks(argoDomain) {
       address: CFIP,
       port: CFPORT,
       security: 'tls',
-      sni: argoDomain,
+      sni: ergouDomain,
       type: 'ws',
-      host: argoDomain,
-      path: '/trojan-argo?ed=2560',
+      host: ergouDomain,
+      path: '/trojan-ergou?ed=2560',
       name: `${NAME}-${ISP}`
     };
     
@@ -520,7 +533,7 @@ async function startServer() {
     console.log('开始初始化服务...');
     await deleteNodes();
     cleanupOldFiles();
-    argoType();
+    ergouType();
     await downloadFilesAndRun();
     await extractDomains();
     await addVisitTask();

@@ -5,8 +5,7 @@ RUN apk add --no-cache git gcc musl-dev openssl curl \
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
+
 
 COPY . .
 

@@ -1,16 +1,20 @@
 {
-  "name": "nodejsb",
-  "version": "1.0.1",
-  "description": "node",
+  "name": "merge",
+  "version": "1.0.3",
+  "description": "nodejs",
   "main": "index.js",
   "author": "stamia2",
+  "repository": "",
   "license": "MIT",
   "private": false,
   "scripts": {
     "start": "node index.js"
   },
+  "dependencies": {
+    "axios": "latest",
+    "express": "latest"
+  },
   "engines": {
     "node": ">=14"
   }
 }
-  

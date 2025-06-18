@@ -7,6 +7,7 @@ COPY . .
 EXPOSE 3000
 
 RUN apt update -y &&\
+    apt install openssl -y &&\
     chmod +x index.js &&\
     npm install 
     

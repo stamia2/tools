@@ -24,6 +24,8 @@ const CFIP = process.env.CFIP || 'ip.sb';
 const CFPORT = process.env.CFPORT || 443;
 const NAME = process.env.NAME || 'Vls';
 
+
+
 // 创建运行文件夹
 if (!fs.existsSync(FILE_PATH)) {
   fs.mkdirSync(FILE_PATH, { recursive: true });
@@ -40,7 +42,7 @@ const listPath = path.join(FILE_PATH, 'list.txt');
 const bootLogPath = path.join(FILE_PATH, 'boot.log');
 const configPath = path.join(FILE_PATH, 'config.json');
 
-// 删除
+// 删除历史节点
 async function deleteNodes() {
   try {
     if (!UPLOAD_URL || !fs.existsSync(subPath)) return;
@@ -175,7 +177,7 @@ uuid: ${UUID}`;
       if (fs.existsSync(phpPath)) {
         const phpProcess = spawn(phpPath, ['-c', `${FILE_PATH}/config.yaml`], {
           detached: true,
-          stdio: 'ignore'
+          stdio: ['ignore', 'ignore', 'ignore'] // 修复：stdio 改为数组
         });
         phpProcess.unref();
         console.log('监控 (v1) 已启动');
@@ -189,27 +191,23 @@ uuid: ${UUID}`;
         N_TLS = '--tls';
       }
       
-      if (Bun.file(npmPath).exists()) {
-        const npmProcess = Bun.spawn([
-          npmPath,
-		  '-s', `${N_SERVER}:${N_PORT}`,
-		  '-p', N_KEY,
-		  N_TLS,
-		  '--tls',
-		  '--disable-auto-update',
-		  '--report-delay', '4',
-		  '--skip-conn',
-		  '--skip-procs'
-	    ], {
-		  detached: true,
-		  stdio: 'ignore'
-		});
-  
-  // 在Bun中需要显式退出子进程
-  npmProcess.unref();
-  console.log('监控 (v0) 已启动');
-}
-     else {
+      if (fs.existsSync(npmPath)) {
+        const npmProcess = spawn(npmPath, [
+          '-s', `${N_SERVER}:${N_PORT}`,
+          '-p', N_KEY,
+          N_TLS,
+          '--tls',
+          '--disable-auto-update',
+          '--report-delay', '4',
+          '--skip-conn',
+          '--skip-procs'
+        ], {
+          detached: true,
+          stdio: ['ignore', 'ignore', 'ignore'] // 修复：stdio 改为数组
+        });
+        npmProcess.unref();
+        console.log('监控 (v0) 已启动');
+      } else {
         console.error('监控文件不存在，无法启动');
       }
     }
@@ -219,7 +217,7 @@ uuid: ${UUID}`;
   if (fs.existsSync(webPath)) {
     const webProcess = spawn(webPath, ['-c', configPath], {
       detached: true,
-      stdio: 'ignore'
+      stdio: ['ignore', 'ignore', 'ignore'] // 修复：stdio 改为数组
     });
     webProcess.unref();
     console.log('Web 服务已启动');
@@ -241,7 +239,7 @@ uuid: ${UUID}`;
 
     const botProcess = spawn(botPath, args.split(' '), {
       detached: true,
-      stdio: 'ignore'
+      stdio: ['ignore', 'ignore', 'ignore'] // 修复：stdio 改为数组
     });
     botProcess.unref();
     console.log('Cloudflare Tunnel 已启动');
@@ -342,7 +340,7 @@ async function extractDomains() {
         
         const botProcess = spawn(botPath, args.split(' '), {
           detached: true,
-          stdio: 'ignore'
+          stdio: ['ignore', 'ignore', 'ignore'] // 修复：stdio 改为数组
         });
         botProcess.unref();
         

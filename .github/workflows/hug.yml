@@ -2,7 +2,7 @@ name: Build serverless-xhttp Image
 
 on:
   push:
-    branches: [ serverless-xhttp ]
+    branches: [ serverless-xhttp ]  # 仅监听 serverless-xhttp 分支
     paths:
       - 'Dockerfile'
       - 'app.js'
@@ -22,7 +22,10 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-        # 移除 ref: huggingface，自动检出触发工作流的分支（serverless-xhttp）
+        with:
+          # 关键：不指定任何与 huggingface 相关的参数
+          # 移除 ref: huggingface 或任何包含 huggingface 的过滤规则
+          fetch-depth: 0  # 拉取完整历史，避免分支过滤问题
 
       - name: 登录 GitHub 容器仓库
         uses: docker/login-action@v3
@@ -40,10 +43,11 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:latest
+            # 镜像标签仅关联 serverless-xhttp
+            ghcr.io/${{ github.repository_owner }}/tools:serverless-xhttp
           labels:
             org.opencontainers.image.source: ${{ github.event.repository.html_url }}
-            org.opencontainers.image.description: HTTP server for serverless-xhttp branch
+            org.opencontainers.image.description: 基于 serverless-xhttp 分支的镜像
             org.opencontainers.image.licenses: MIT
           cache-from: type=gha
           cache-to: type=gha,mode=max

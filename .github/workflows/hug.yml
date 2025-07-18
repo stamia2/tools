@@ -1,16 +1,16 @@
-name: Build serverless-xhttp Image
+name: Build huggingface Image
 
 on:
   push:
-    branches: [ serverless-xhttp ]  # 仅在 serverless-xhttp 分支推送时触发
+    branches: [ serverless-xhttp ]
     paths:
       - 'Dockerfile'
       - 'app.js'
       - 'package.json'
       - 'index.html'
   pull_request:
-    branches: [ serverless-xhttp ]  # 仅监听该分支的 PR
-  workflow_dispatch:  # 允许手动触发（仅针对该分支）
+    branches: [ serverless-xhttp ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,8 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        # 无需指定 ref，默认会拉取触发工作流的分支（即 serverless-xhttp）
-
+        # 移除 ref: huggingface 参数，自动检出触发分支
+          
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -34,16 +34,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Generate image tag
+        id: tag-generator
+        run: |
+          # 使用分支名作为标签（如 serverless-xhttp）
+          BRANCH=$(echo "${{ github.ref }}" | sed 's#refs/heads/##')
+          echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+          
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # 仅使用 serverless-xhttp 作为标签，明确标识分支
-          tags: ghcr.io/${{ github.repository_owner }}/hug:serverless-xhttp
+          # 使用动态生成的标签（基于分支名）
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/hug:${{ steps.tag-generator.outputs.tag }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=http server for serverless-xhttp branch
+            org.opencontainers.image.description=http server
             org.opencontainers.image.licenses=MIT
           cache-from: type=gha
           cache-to: type=gha,mode=max

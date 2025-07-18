@@ -1,57 +1,56 @@
-name: Build huggingface Image
+name: Build serverless-xhttp Image
 
+# 仅监听 serverless-xhttp 分支的变动
 on:
   push:
     branches: [ serverless-xhttp ]
-    paths:
+    paths:  # 仅当这些文件变动时触发，减少不必要构建
       - 'Dockerfile'
       - 'app.js'
       - 'package.json'
       - 'index.html'
   pull_request:
     branches: [ serverless-xhttp ]
-  workflow_dispatch:
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: write  # 允许推送镜像到 GitHub Packages
 
     steps:
-      - name: Checkout repository
+      - name: 检出代码
         uses: actions/checkout@v4
-        # 移除 ref: huggingface 参数，自动检出触发分支
-          
-      - name: Log in to GitHub Container Registry
+        # 不指定 ref，自动关联触发工作流的 serverless-xhttp 分支
+
+      - name: 登录 GitHub 容器仓库
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}  # 自动获取的临时令牌
 
-      - name: Set up Docker Buildx
+      - name: 配置 Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          install: true  # 确保安装最新 Buildx 组件，减少兼容性问题
 
-      - name: Generate image tag
-        id: tag-generator
-        run: |
-          # 使用分支名作为标签（如 serverless-xhttp）
-          BRANCH=$(echo "${{ github.ref }}" | sed 's#refs/heads/##')
-          echo "tag=$BRANCH" >> $GITHUB_OUTPUT
-          
-      - name: Build and push Docker image
+      - name: 构建并推送镜像
         uses: docker/build-push-action@v5
         with:
-          context: .
-          push: true
-          # 使用动态生成的标签（基于分支名）
+          context: .  # 构建上下文为当前目录
+          push: true  # 推送镜像到仓库
           tags: |
-            ghcr.io/${{ github.repository_owner }}/hug:${{ steps.tag-generator.outputs.tag }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=http server
-            org.opencontainers.image.licenses=MIT
-          cache-from: type=gha
+            # 镜像标签固定为分支名，明确对应 serverless-xhttp
+            ghcr.io/${{ github.repository_owner }}/serverless-xhttp-image:latest
+          labels:
+            org.opencontainers.image.title: "serverless-xhttp Image"
+            org.opencontainers.image.description: "镜像仅对应 serverless-xhttp 分支"
+            org.opencontainers.image.source: ${{ github.event.repository.html_url }}
+            org.opencontainers.image.licenses: MIT
+          cache-from: type=gha  # 启用缓存加速构建
           cache-to: type=gha,mode=max
+          # 错误处理：构建失败时自动重试一次
+          retry: 1

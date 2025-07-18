@@ -1,61 +1,53 @@
 name: huggggg
 
-# 仅在 serverless-xhttp 分支有变动时触发
 on:
   push:
-    branches: [ "serverless-xhttp" ]  # 明确指定目标分支
-    paths:  # 只监听可能影响镜像构建的核心文件
+    branches: [ "serverless-xhttp" ]
+    paths:
       - "Dockerfile"
       - "**/*.js"
       - "**/*.html"
       - "package.json"
       - "package-lock.json"
-  workflow_dispatch:  # 允许手动触发构建
+  workflow_dispatch:
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # 读取代码仓库权限
-      packages: write  # 推送镜像到 GitHub Packages 权限
+      contents: read
+      packages: write
 
     steps:
-      # 步骤1：检出 serverless-xhttp 分支代码
       - name: Checkout serverless-xhttp branch
         uses: actions/checkout@v4
         with:
-          ref: "serverless-xhttp"  # 强制检出该分支（确保准确性）
-          fetch-depth: 1  # 只拉取最新提交，加快速度
+          ref: "serverless-xhttp"
+          fetch-depth: 1
 
-      # 步骤2：登录 GitHub 容器仓库（GHCR）
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}  # 当前触发工作流的用户
-          password: ${{ secrets.GITHUB_TOKEN }}  # 自动生成的临时令牌
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 步骤3：设置 Docker Buildx（优化构建效率）
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 步骤4：构建并推送镜像
       - name: Build and push serverless-xhttp image
         uses: docker/build-push-action@v5
         with:
-          context: .  # 构建上下文为当前仓库根目录
-          push: true  # 构建完成后推送到仓库
+          context: .
+          push: true
           tags: |
-            # 镜像标签固定为分支名，清晰对应
             ghcr.io/${{ github.repository_owner }}/serverless-xhttp:latest
-            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:${{ github.sha }}  # 额外添加提交哈希标签，便于版本追溯
+            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:${{ github.sha }}
           labels:
             org.opencontainers.image.title: "serverless-xhttp Branch Image"
-            org.opencontainers.image.version: ${{ github.sha }}  # 用提交哈希标识版本
+            org.opencontainers.image.version: ${{ github.sha }}
             org.opencontainers.image.source: ${{ github.event.repository.html_url }}
-            org.opencontainers.image.branch: "serverless-xhttp"  # 明确标注分支
+            org.opencontainers.image.branch: "serverless-xhttp"
             org.opencontainers.image.licenses: MIT
-
-          # 启用缓存加速后续构建
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha  # 确保这一行缩进正确（与labels、tags同级）
+          cache-to: type=gha,mode=max  # 这一行也需与上一行对齐

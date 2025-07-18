@@ -49,5 +49,5 @@ jobs:
             org.opencontainers.image.source: ${{ github.event.repository.html_url }}
             org.opencontainers.image.branch: "serverless-xhttp"
             org.opencontainers.image.licenses: MIT
-          cache-from: type=gha  # 确保这一行缩进正确（与labels、tags同级）
-          cache-to: type=gha,mode=max  # 这一行也需与上一行对齐
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

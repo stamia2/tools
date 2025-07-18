@@ -372,10 +372,10 @@ async function extractDomains() {
 
       if (ergouDomains.length > 0) {
         ergouDomain = ergouDomains[0];
-        console.log('ErgouDomain:', ergouDomain);
+      //  console.log('ErgouDomain:', ergouDomain);
         await generateLinks(ergouDomain);
       } else {
-        console.log('ErgouDomain not found, re-running bot to obtain ErgouDomain');
+       // console.log('ErgouDomain not found, re-running bot to obtain ErgouDomain');
         // 删除 boot.log 文件，等待 2s 重新运行 server 以获取 ErgouDomain
         fs.unlinkSync(path.join(FILE_PATH, 'boot.log'));
         async function killBotProcess() {
@@ -390,7 +390,7 @@ async function extractDomains() {
         const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ERGOU_PORT}`;
         try {
           await exec(`nohup ${path.join(FILE_PATH, 'bot')} ${args} >/dev/null 2>&1 &`);
-          console.log('bot is running.');
+        //  console.log('bot is running.');
           await new Promise((resolve) => setTimeout(resolve, 3000));
           await extractDomains(); // 重新提取域名
         } catch (error) {
@@ -421,9 +421,9 @@ vmess://${Buffer.from(JSON.stringify(VMESS)).toString('base64')}
 trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${ergouDomain}&type=ws&host=${ergouDomain}&path=%2Ftrojan-ergou%3Fed%3D2560#${NAME}-${ISP}
     `;
         // 打印 sub.txt 内容到控制台
-        console.log(Buffer.from(subTxt).toString('base64'));
+       // console.log(Buffer.from(subTxt).toString('base64'));
         fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
-        console.log(`${FILE_PATH}/sub.txt saved successfully`);
+       // console.log(`${FILE_PATH}/sub.txt saved successfully`);
         uplodNodes();
         // 将内容进行 base64 编码并写入 SUB_PATH 路由
         app.get(`/${SUB_PATH}`, (req, res) => {
@@ -452,7 +452,7 @@ async function uplodNodes() {
         });
         
         if (response.status === 200) {
-            console.log('Subscription uploaded successfully');
+         //   console.log('Subscription uploaded successfully');
         } else {
           return null;
           //  console.log('Unknown response status');
@@ -478,7 +478,7 @@ async function uplodNodes() {
               headers: { 'Content-Type': 'application/json' }
           });
           if (response.status === 200) {
-            console.log('Subscription uploaded successfully');
+          //  console.log('Subscription uploaded successfully');
         } else {
             return null;
         }
@@ -504,8 +504,8 @@ function cleanFiles() {
 
     exec(`rm -rf ${filesToDelete.join(' ')} >/dev/null 2>&1`, (error) => {
       console.clear();
-      console.log('App is running');
-      console.log('Thank you for using this script, enjoy!');
+     // console.log('App is running');
+     // console.log('Thank you for using this script, enjoy!');
     });
   }, 90000); // 90s
 }
@@ -514,7 +514,7 @@ cleanFiles();
 // 自动访问项目URL
 async function AddVisitTask() {
   if (!AUTO_ACCESS || !PROJECT_URL) {
-    console.log("Skipping adding automatic access task");
+   // console.log("Skipping adding automatic access task");
     return;
   }
 
@@ -527,7 +527,7 @@ async function AddVisitTask() {
       }
     });
     // console.log(`${JSON.stringify(response.data)}`);
-    console.log(`automatic access task added successfully`);
+    // console.log(`automatic access task added successfully`);
   } catch (error) {
     console.error(`添加URL失败: ${error.message}`);
   }

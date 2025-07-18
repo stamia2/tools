@@ -41,13 +41,14 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:latest  # 比 tags: 多2个空格
-            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:${{ github.sha }}  # 保持对齐
-          labels:  # 与 tags: 严格对齐（2个空格）
+            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:latest
+            ghcr.io/${{ github.repository_owner }}/serverless-xhttp:${{ github.sha }}
+          labels:
             org.opencontainers.image.title: "serverless-xhttp Branch Image"
             org.opencontainers.image.version: ${{ github.sha }}
-            org.opencontainers.image.source: ${{ github.event.repository.html_url }}
-            org.opencontainers.image.branch: "serverless-xhttp"  # 第47行，确保与上面的键对齐
+            org.opencontainers.image.source: |-
+              ${{ github.event.repository.html_url }}
+            org.opencontainers.image.branch: "serverless-xhttp"
             org.opencontainers.image.licenses: MIT
-          cache-from: type=gha  # 与 labels: 对齐
-          cache-to: type=gha,mode=max  # 与 labels: 对齐
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
